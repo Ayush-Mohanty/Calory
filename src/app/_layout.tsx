@@ -7,6 +7,7 @@ import { tokenCache } from '@clerk/expo/token-cache';
 
 import { saveUserToLocalStorage } from '@/services/storage';
 import { saveUserToFirestore } from '@/services/firebase';
+import { AppColors } from '@/constants/colors';
 
 // Prevent auto hiding splash screen during initialization
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -66,7 +67,7 @@ function RootNavigator() {
   if (!isLoaded) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#10B981" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
       </View>
     );
   }

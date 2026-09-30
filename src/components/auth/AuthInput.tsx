@@ -8,6 +8,7 @@ import {
   TextInputProps,
 } from 'react-native';
 import { EyeIcon, EyeOffIcon } from './AuthIcons';
+import { AppColors } from '@/constants/colors';
 
 interface AuthInputProps extends TextInputProps {
   label: string;
@@ -87,9 +88,9 @@ const styles = StyleSheet.create({
     height: 52,
   },
   inputWrapperFocused: {
-    borderColor: '#10B981',
+    borderColor: AppColors.primary,
     backgroundColor: '#1A2130',
-    shadowColor: '#10B981',
+    shadowColor: AppColors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 8,

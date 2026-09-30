@@ -1,30 +1,31 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
 import { useSignIn, useSignUp } from '@clerk/expo/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppColors } from '@/constants/colors';
+import {
+  AlertIcon,
+  CheckIcon,
+  CloseIcon,
+  FlameIcon,
+  LockIcon,
+  MailIcon,
+  UserIcon,
+} from './AuthIcons';
 import { AuthInput } from './AuthInput';
 import { GoogleButton } from './GoogleButton';
-import {
-  MailIcon,
-  LockIcon,
-  UserIcon,
-  AlertIcon,
-  CloseIcon,
-  CheckIcon,
-  FlameIcon,
-} from './AuthIcons';
 
 interface AuthScreenProps {
   onAuthSuccess?: () => void;
@@ -208,16 +209,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           {/* Dribbble Style Ambient Branding Header */}
           <View style={styles.header}>
             <View style={styles.logoWrapper}>
-              {/* Background ambient glow image */}
-              <Image
-                source={require('@/assets/images/logo-glow.png')}
-                style={styles.logoGlow}
-                resizeMode="contain"
-              />
+              {/* Background ambient glow image removed */}
               {/* Elevated Logo Card with app icon */}
               <View style={styles.logoContainer}>
                 <Image
-                  source={require('@/assets/images/icon.png')}
+                  source={require('../../../assets/expo.icon/images/images/icon.png')}
                   style={styles.appLogo}
                   resizeMode="contain"
                 />
@@ -226,7 +222,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
             <View style={styles.badgeRow}>
               <View style={styles.badge}>
-                <FlameIcon size={14} color="#10B981" />
+                <FlameIcon size={14} color={AppColors.primary} />
                 <Text style={styles.badgeText}>AI POWERED TRACKER</Text>
               </View>
             </View>
@@ -250,10 +246,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
           {successBanner && (
             <View style={styles.bannerSuccess}>
-              <CheckIcon size={18} color="#10B981" />
+              <CheckIcon size={18} color={AppColors.primary} />
               <Text style={styles.bannerSuccessText}>{successBanner}</Text>
               <TouchableOpacity onPress={() => setSuccessBanner(null)}>
-                <CloseIcon size={16} color="#10B981" />
+                <CloseIcon size={16} color={AppColors.primary} />
               </TouchableOpacity>
             </View>
           )}
@@ -284,7 +280,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   disabled={loading}
                   activeOpacity={0.85}>
                   <LinearGradient
-                    colors={['#10B981', '#059669']}
+                    colors={AppColors.primaryGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.primaryButton}>
@@ -411,7 +407,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   disabled={loading}
                   activeOpacity={0.85}>
                   <LinearGradient
-                    colors={['#10B981', '#059669']}
+                    colors={AppColors.primaryGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.primaryButton}>
@@ -497,8 +493,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(16, 185, 129, 0.4)',
-    shadowColor: '#10B981',
+    borderColor: AppColors.primaryBorder,
+    shadowColor: AppColors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 14,
@@ -516,15 +512,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: AppColors.primarySoft,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+    borderColor: AppColors.primaryBorder,
   },
   badgeText: {
-    color: '#10B981',
+    color: AppColors.primary,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.8,
@@ -565,9 +561,9 @@ const styles = StyleSheet.create({
   bannerSuccess: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: AppColors.primarySoft,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderColor: AppColors.primaryBorder,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -577,7 +573,7 @@ const styles = StyleSheet.create({
   },
   bannerSuccessText: {
     flex: 1,
-    color: '#6EE7B7',
+    color: AppColors.primaryLighter,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -648,7 +644,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#10B981',
+    shadowColor: AppColors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -676,7 +672,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   footerLink: {
-    color: '#10B981',
+    color: AppColors.primary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -698,7 +694,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   emailHighlight: {
-    color: '#10B981',
+    color: AppColors.primary,
     fontWeight: '600',
   },
   resendRow: {
@@ -711,7 +707,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   resendLink: {
-    color: '#10B981',
+    color: AppColors.primary,
     fontSize: 13,
     fontWeight: '600',
   },

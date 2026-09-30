@@ -1,5 +1,6 @@
 import React from 'react';
-import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { AppColors } from '@/constants/colors';
 
 interface IconProps {
   size?: number;
@@ -64,13 +65,13 @@ export const EyeOffIcon: React.FC<IconProps> = ({ size = 20, color = '#94A3B8' }
   </Svg>
 );
 
-export const FlameIcon: React.FC<IconProps> = ({ size = 20, color = '#10B981' }) => (
+export const FlameIcon: React.FC<IconProps> = ({ size = 20, color = AppColors.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
   </Svg>
 );
 
-export const CheckIcon: React.FC<IconProps> = ({ size = 20, color = '#10B981' }) => (
+export const CheckIcon: React.FC<IconProps> = ({ size = 20, color = AppColors.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M20 6 9 17l-5-5" />
   </Svg>
