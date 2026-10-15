@@ -9,6 +9,7 @@ import { HomeHeader } from '@/components/home/HomeHeader';
 import { WeeklyCalendar } from '@/components/home/WeeklyCalendar';
 import { CaloriesCard } from '@/components/home/CaloriesCard';
 import { WaterCard } from '@/components/home/WaterCard';
+import { RecentActivity } from '@/components/home/RecentActivity';
 import {
   getOnboardingFromLocalStorage,
   getAiPlanFromLocalStorage,
@@ -140,6 +141,7 @@ export default function HomeTab() {
             consumedWaterLiters={consumedWater}
             onPlanUpdate={handleWaterPlanUpdate}
           />
+          <RecentActivity logs={logs} />
         </ScrollView>
       ) : (
         <AiNutritionPlanScreen
@@ -156,11 +158,11 @@ export default function HomeTab() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#090C10',
+    backgroundColor: '#F8FAFC', // Light premium background
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#090C10',
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -33,7 +33,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({ avatarUrl, displayName }
         </View>
       </View>
       <TouchableOpacity style={styles.notificationBtn} activeOpacity={0.7}>
-        <HugeiconsIcon icon={Notification03Icon} size={24} color="#FFFFFF" />
+        <HugeiconsIcon icon={Notification03Icon} size={24} color="#0F172A" />
         <View style={styles.notificationBadge} />
       </TouchableOpacity>
     </View>
@@ -80,23 +80,23 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#64748B',
     marginBottom: 2,
   },
   nameText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   notificationBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#161B26',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(0, 0, 0, 0.05)',
     position: 'relative',
   },
   notificationBadge: {
@@ -108,6 +108,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#EF4444',
     borderWidth: 1.5,
-    borderColor: '#161B26',
+    borderColor: '#FFFFFF',
   },
 });

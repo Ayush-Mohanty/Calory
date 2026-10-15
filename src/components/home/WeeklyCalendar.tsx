@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   dayText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     marginBottom: 8,
     fontWeight: '500',
     textTransform: 'uppercase',
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     // Border around every date as requested
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(0, 0, 0, 0.05)',
   },
   todayDateCircle: {
     borderWidth: 1.5,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 16,
-    color: '#E2E8F0',
+    color: '#0F172A',
     fontWeight: '600',
   },
   todayDateText: {

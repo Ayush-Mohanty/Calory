@@ -117,12 +117,18 @@ export const WaterCard: React.FC<WaterCardProps> = ({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#121720',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 20,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+    marginHorizontal: 16,
   },
   headerRow: {
     flexDirection: 'row',
@@ -133,12 +139,12 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   editBtn: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F1F5F9',
   },
   glassesContainer: {
     flexDirection: 'row',
@@ -153,7 +159,7 @@ const styles = StyleSheet.create({
   },
   glassesLeftText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
     fontWeight: '500',
   },
@@ -164,16 +170,16 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#161B26',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#E2E8F0',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFF',
+    color: '#0F172A',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -181,13 +187,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     paddingHorizontal: 12,
   },
   input: {
     flex: 1,
-    color: '#FFF',
+    color: '#0F172A',
     fontSize: 16,
     paddingVertical: 16,
     textAlign: 'center',
@@ -203,10 +209,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#F1F5F9',
   },
   modalCancelText: {
-    color: '#FFF',
+    color: '#0F172A',
     fontWeight: '600',
     fontSize: 16,
   },

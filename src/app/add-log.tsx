@@ -54,13 +54,12 @@ export default function AddLogScreen() {
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color="#FFF" />
+          <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color="#0F172A" />
         </TouchableOpacity>
-        <Text style={styles.title}>Add Log</Text>
-        <View style={styles.placeholder} />
       </View>
       
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.largeTitle}>Add Log</Text>
         <Text style={styles.label}>Log Name</Text>
         <TextInput 
           style={styles.input} 
@@ -131,47 +130,44 @@ export default function AddLogScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#090C10',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingTop: 50,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
   },
   backButton: {
     padding: 8,
+    alignSelf: 'flex-start',
   },
-  title: { 
-    fontSize: 20, 
-    fontWeight: '700', 
-    color: '#FFF',
-  },
-  placeholder: {
-    width: 40,
+  largeTitle: { 
+    fontSize: 32, 
+    fontWeight: '800', 
+    color: '#0F172A',
+    marginBottom: 24,
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
   },
   label: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 14,
     marginBottom: 8,
     fontWeight: '500',
   },
   input: {
-    backgroundColor: '#161B26',
-    color: '#FFF',
+    backgroundColor: '#FFFFFF',
+    color: '#0F172A',
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#E2E8F0',
     fontSize: 16,
   },
   button: {

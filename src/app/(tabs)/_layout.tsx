@@ -1,17 +1,18 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, StyleSheet, Dimensions, Platform, Modal, Text } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Home01Icon, Activity01Icon, UserIcon, PlusIcon } from '@/constants/hugeicons';
+import { Home01Icon, Activity01Icon, UserIcon, PlusIcon, Dumbbell01Icon, DropletIcon, FireIcon, SparklesIcon } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
 
 const { width } = Dimensions.get('window');
 
-function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [isFabModalVisible, setIsFabModalVisible] = useState(false);
 
   return (
     <View style={[styles.tabBarContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -53,7 +54,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
                 accessibilityLabel={options.tabBarAccessibilityLabel}
-                testID={options.tabBarTestID}
+                testID={options.tabBarButtonTestID}
                 onPress={onPress}
                 style={styles.tabItem}
               >
@@ -72,11 +73,53 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         <TouchableOpacity 
           style={styles.fabButton} 
           activeOpacity={0.8}
-          onPress={() => router.push('/add-log')}
+          onPress={() => setIsFabModalVisible(true)}
         >
           <HugeiconsIcon icon={PlusIcon} size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
+
+      {/* FAB Modal */}
+      <Modal visible={isFabModalVisible} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsFabModalVisible(false)}>
+          <View style={[styles.fabMenu, { bottom: insets.bottom + 80 }]}>
+            <View style={styles.fabGrid}>
+              
+              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); router.push('/log-exercise'); }}>
+                <View style={styles.iconCircle}>
+                  <HugeiconsIcon icon={Dumbbell01Icon} size={24} color={AppColors.primary} />
+                </View>
+                <Text style={styles.gridText}>Log Exercise</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); router.push('/add-log'); }}>
+                <View style={[styles.iconCircle, { backgroundColor: 'rgba(14, 165, 233, 0.1)' }]}>
+                  <HugeiconsIcon icon={DropletIcon} size={24} color="#0EA5E9" />
+                </View>
+                <Text style={styles.gridText}>Drink Water</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); }}>
+                <View style={[styles.iconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                  <HugeiconsIcon icon={Activity01Icon} size={24} color="#F59E0B" />
+                </View>
+                <Text style={styles.gridText}>Food Database</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); }}>
+                <View style={[styles.iconCircle, { backgroundColor: 'rgba(236, 72, 153, 0.1)' }]}>
+                  <HugeiconsIcon icon={FireIcon} size={24} color="#EC4899" />
+                  <View style={styles.premiumBadge}>
+                    <HugeiconsIcon icon={SparklesIcon} size={12} color="#FFF" />
+                  </View>
+                </View>
+                <Text style={styles.gridText}>Scan Food</Text>
+              </TouchableOpacity>
+
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -111,7 +154,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#161B26',
+    backgroundColor: '#FFFFFF',
     borderRadius: 30,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -120,11 +163,11 @@ const styles = StyleSheet.create({
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: '#E2E8F0',
   },
   navTabs: {
     flexDirection: 'row',
@@ -162,4 +205,61 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Dim the background slightly
+  },
+  fabMenu: {
+    position: 'absolute',
+    right: 20,
+    width: width - 40,
+    backgroundColor: 'transparent',
+    padding: 10,
+    borderWidth: 0,
+  },
+  fabGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: '47%',
+    backgroundColor: '#FFFFFF', // Premium crisp white
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9', // Very subtle border
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(41, 143, 80, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  gridText: {
+    color: '#0F172A', // Deep slate for high contrast on white
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#F59E0B',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#161B26',
+  }
 });

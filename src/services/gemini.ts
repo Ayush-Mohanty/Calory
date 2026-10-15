@@ -28,11 +28,9 @@ export interface AiNutritionPlan {
   generatedAt: number;
 }
 
-const GEMINI_API_KEY =
-  process.env.EXPO_PUBLIC_GEMINI_API_KEY ||
-  'AQ.Ab8RN6IHr6tAW_9RDuGg_Bw6cju8khY897vw0qJV35X4TKUtng';
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
-const GEMINI_MODEL = 'gemini-3.8-flash';
+const GEMINI_MODEL = 'gemini-1.5-flash';
 
 /**
  * Calculates user age from birthDate
@@ -239,6 +237,11 @@ Return ONLY valid JSON matching this exact structure:
 `;
 
   try {
+    if (!GEMINI_API_KEY) {
+      console.warn('[Gemini API] EXPO_PUBLIC_GEMINI_API_KEY not found in environment, using fallback formula plan');
+      return generateFallbackPlan(data);
+    }
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     
     const response = await fetch(url, {
