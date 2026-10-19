@@ -10,6 +10,10 @@ type Props = {
     gapAngle?: number;
     value?: number;
     label?: string;
+    valueColor?: string;
+    labelColor?: string;
+    activeStrokeColor?: string;
+    inactiveStrokeColor?: string;
 };
 
 export function SegmentedHalfCircleProgress30({
@@ -20,6 +24,10 @@ export function SegmentedHalfCircleProgress30({
     gapAngle = 25,
     value,
     label,
+    valueColor = '#0F172A',
+    labelColor = '#64748B',
+    activeStrokeColor = AppColors.primary,
+    inactiveStrokeColor = '#E2E8F0',
 }: Props) {
     const clamped = Math.max(0, Math.min(1, progress));
 
@@ -76,7 +84,7 @@ export function SegmentedHalfCircleProgress30({
                         <Path
                             key={i}
                             d={createArc(start, end)}
-                            stroke={isActive ? AppColors.primary : "#1E293B"}
+                            stroke={isActive ? activeStrokeColor : inactiveStrokeColor}
                             strokeWidth={strokeWidth}
                             fill="none"
                             strokeLinecap="butt" // ✅ CRITICAL
@@ -86,9 +94,8 @@ export function SegmentedHalfCircleProgress30({
             </Svg>
 
             <View style={styles.textOverlay}>
-                {/* <Text style={styles.mainText}>🔥</Text> */}
-                <Text style={styles.mainText}>{value}</Text>
-                <Text style={styles.subText}>{label}</Text>
+                <Text style={[styles.mainText, { color: valueColor }]}>{value}</Text>
+                <Text style={[styles.subText, { color: labelColor }]}>{label}</Text>
             </View>
         </View>
     );
@@ -102,12 +109,13 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     mainText: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: "#FFFFFF",
+        fontSize: 32,
+        fontWeight: "700",
+        color: "#0F172A",
     },
     subText: {
         fontSize: 14,
-        color: "#94A3B8",
+        color: "#64748B",
+        fontWeight: "500",
     },
 });

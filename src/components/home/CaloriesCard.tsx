@@ -112,8 +112,8 @@ export const CaloriesCard: React.FC<CaloriesCardProps> = ({
             <Text style={styles.modalTitle}>Edit Goals</Text>
             
             <View style={styles.inputGroup}>
-              <View style={[styles.inputIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}>
-                <HugeiconsIcon icon={FireIcon} size={20} color="#FFF" />
+              <View style={[styles.inputIconWrap, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <HugeiconsIcon icon={FireIcon} size={20} color="#EF4444" />
               </View>
               <TextInput 
                 style={styles.input} 
@@ -327,10 +327,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#F1F5F9',
   },
   modalCancelText: {
-    color: '#FFF',
+    color: '#0F172A',
     fontWeight: '600',
     fontSize: 16,
   },
