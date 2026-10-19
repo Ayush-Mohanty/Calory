@@ -5,14 +5,18 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft02Icon, FireIcon, Calendar03Icon } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUser } from '@clerk/expo';
+import { addNutritionLogToFirestore } from '@/services/firebase';
 
 export default function ExerciseDetailsScreen() {
   const router = useRouter();
+  const { user } = useUser();
   const { type } = useLocalSearchParams();
   
   const [intensity, setIntensity] = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [duration, setDuration] = useState<string>(''); // empty by default so user can type
   const [activeChip, setActiveChip] = useState<string>(''); // tracks which chip is selected
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(1)).current; // Starts at Medium (1)
 
@@ -44,14 +48,59 @@ export default function ExerciseDetailsScreen() {
     setActiveChip(''); // deselect chip if manual typing
   };
 
-  const handleContinue = () => {
+  const formatDateLocal = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const handleContinue = async () => {
     if (!duration) {
       alert('Please select or enter a duration.');
       return;
     }
-    // For now, alert success and go back to home
-    alert(`Logged ${duration} min of ${intensity} intensity ${exerciseType}!`);
-    router.replace('/home');
+    const mins = parseInt(duration, 10);
+    if (isNaN(mins) || mins <= 0) {
+      alert('Please enter a valid duration.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Calculate estimated calories burned
+      let burnRate = 8; // default
+      if (exerciseType === 'Cardio') {
+        burnRate = intensity === 'Low' ? 6 : intensity === 'High' ? 13 : 9;
+      } else {
+        burnRate = intensity === 'Low' ? 4 : intensity === 'High' ? 9 : 6;
+      }
+      const estimatedCalories = Math.round(mins * burnRate);
+
+      if (user?.id) {
+        await addNutritionLogToFirestore({
+          userId: user.id,
+          date: formatDateLocal(new Date()),
+          name: `${exerciseType} (${intensity}, ${mins} min)`,
+          calories: estimatedCalories,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          createdAt: Date.now(),
+        });
+      }
+
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/home');
+      }
+    } catch (err) {
+      console.error('Error logging exercise:', err);
+      router.replace('/(tabs)/home');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const animatedThumbStyle = {
@@ -145,8 +194,12 @@ export default function ExerciseDetailsScreen() {
         </ScrollView>
 
         <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-            <Text style={styles.continueButtonText}>Continue</Text>
+          <TouchableOpacity 
+            style={[styles.continueButton, isSubmitting && { opacity: 0.7 }]} 
+            onPress={handleContinue}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.continueButtonText}>{isSubmitting ? 'Saving...' : 'Continue'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

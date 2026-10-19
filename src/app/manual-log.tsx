@@ -6,18 +6,59 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useUser } from '@clerk/expo';
+import { addNutritionLogToFirestore } from '@/services/firebase';
+
 export default function ManualLogScreen() {
   const router = useRouter();
+  const { user } = useUser();
   const [calories, setCalories] = useState('');
   const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLog = () => {
+  const formatDateLocal = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const handleLog = async () => {
     if (!calories) {
       alert('Please enter calories burned.');
       return;
     }
-    alert(`Logged ${calories} kcal manually!`);
-    router.replace('/home');
+    const calValue = parseInt(calories, 10);
+    if (isNaN(calValue) || calValue <= 0) {
+      alert('Please enter a valid calorie amount.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (user?.id) {
+        await addNutritionLogToFirestore({
+          userId: user.id,
+          date: formatDateLocal(new Date()),
+          name: description.trim() || 'Manual Exercise',
+          calories: calValue,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          createdAt: Date.now(),
+        });
+      }
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/home');
+      }
+    } catch (err) {
+      console.error('Error logging manual calories:', err);
+      router.replace('/(tabs)/home');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -70,8 +111,12 @@ export default function ManualLogScreen() {
         </ScrollView>
 
         <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.logButton} onPress={handleLog}>
-            <Text style={styles.logButtonText}>Log Calories</Text>
+          <TouchableOpacity 
+            style={[styles.logButton, isSubmitting && { opacity: 0.7 }]} 
+            onPress={handleLog}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.logButtonText}>{isSubmitting ? 'Logging...' : 'Log Calories'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

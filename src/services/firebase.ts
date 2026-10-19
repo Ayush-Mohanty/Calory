@@ -29,8 +29,15 @@ let db: Firestore | null = null;
 
 try {
   if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    db = getFirestore(app);
+    const isNew = getApps().length === 0;
+    app = isNew ? initializeApp(firebaseConfig) : getApp();
+    try {
+      db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+      });
+    } catch {
+      db = getFirestore(app);
+    }
   } else {
     console.warn('[Firebase] Config keys are missing. Firebase will operate in offline mock mode.');
   }
