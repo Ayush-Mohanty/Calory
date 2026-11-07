@@ -3,7 +3,7 @@ import { View, ActivityIndicator, StyleSheet, useColorScheme } from 'react-nativ
 import { DarkTheme, DefaultTheme, ThemeProvider, Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { ClerkProvider, ClerkLoaded, useAuth, useUser } from '@clerk/expo';
-import { tokenCache } from '@clerk/expo/token-cache';
+import { resilientTokenCache } from '@/utils/tokenCache';
 
 import { saveUserToLocalStorage } from '@/services/storage';
 import { saveUserToFirestore } from '@/services/firebase';
@@ -88,7 +88,7 @@ export default function RootLayout() {
   return (
     <ClerkProvider
       publishableKey={clerkPublishableKey || ''}
-      tokenCache={tokenCache}>
+      tokenCache={resilientTokenCache}>
       <ClerkLoaded>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <RootNavigator />

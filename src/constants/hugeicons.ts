@@ -120,3 +120,18 @@ export const Edit02Icon: [string, Record<string, any>][] = [
   ["path", { d: "M16.4745 5.40801L18.5919 7.5254M17.8361 3.5539C19.3981 2.01511 21.9849 4.60193 20.4461 6.1639L8.85233 17.7577L4 18.5L4.7423 13.6477L17.8361 3.5539Z", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "0" }]
 ];
 
+export const Time02Icon: [string, Record<string, any>][] = [
+  ["circle", { cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "1.5", key: "0" }],
+  ["path", { d: "M12 6V12L16 14", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "1" }]
+];
+
+export const Search01Icon: [string, Record<string, any>][] = [
+  ["circle", { cx: "11.5", cy: "11.5", r: "8", stroke: "currentColor", strokeWidth: "1.5", key: "0" }],
+  ["path", { d: "M17.5 17.5L22 22", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "1" }]
+];
+
+export const Cancel01Icon: [string, Record<string, any>][] = [
+  ["path", { d: "M18 6L6 18M6 6L18 18", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "0" }]
+];
+
+

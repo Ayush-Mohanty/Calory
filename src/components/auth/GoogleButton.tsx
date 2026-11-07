@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useSSO } from '@clerk/expo';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { GoogleIcon } from './AuthIcons';
@@ -24,6 +25,7 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({
   onError,
   disabled = false,
 }) => {
+  const router = useRouter();
   const { startSSOFlow } = useSSO();
   const [loading, setLoading] = useState(false);
 
@@ -32,21 +34,37 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({
     setLoading(true);
 
     try {
+      console.log('[Google SSO] Starting OAuth flow...');
       const redirectUrl = AuthSession.makeRedirectUri({
         scheme: 'calory',
         path: 'oauth-native-callback',
       });
 
-      const { createdSessionId, setActive } = await startSSOFlow({
+      const ssoPromise = startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Google authentication timed out. Please try again.')), 25000)
+      );
+
+      const { createdSessionId, setActive } = await Promise.race([ssoPromise, timeoutPromise]);
+      console.log('[Google SSO] Result session:', createdSessionId);
+
       if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
+        const setActivePromise = setActive({ session: createdSessionId });
+        const setActiveTimeout = new Promise<void>((resolve) =>
+          setTimeout(() => {
+            console.warn('[Google SSO] setActive took >4s, continuing');
+            resolve();
+          }, 4000)
+        );
+        await Promise.race([setActivePromise, setActiveTimeout]);
+        router.replace('/');
         onSuccess?.();
       } else {
-        // Additional verification might be required in some flows
+        router.replace('/');
         onSuccess?.();
       }
     } catch (err: any) {

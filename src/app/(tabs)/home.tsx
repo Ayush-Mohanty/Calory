@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth, useUser } from '@clerk/expo';
+import { useFocusEffect } from 'expo-router';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 
 import { AiNutritionPlanScreen } from '@/components/plan/AiNutritionPlanScreen';
@@ -40,13 +41,16 @@ export default function HomeTab() {
 
   const dateString = formatDateLocal(selectedDate);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const unsubscribe = subscribeToNutritionLogs(user.id, dateString, (fetchedLogs) => {
-      setLogs(fetchedLogs);
-    });
-    return () => unsubscribe();
-  }, [user?.id, dateString]);
+  // Real-time subscription to logs for selectedDate; updates automatically on new logs & screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      const unsubscribe = subscribeToNutritionLogs(user.id, dateString, (fetchedLogs) => {
+        setLogs(fetchedLogs);
+      });
+      return () => unsubscribe();
+    }, [user?.id, dateString])
+  );
 
   useEffect(() => {
     async function fetchLocalData() {
@@ -93,6 +97,7 @@ export default function HomeTab() {
   const displayName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Athlete';
   const avatarUrl = user?.imageUrl || null;
 
+  // Total calories burned/logged
   const consumedCalories = logs.reduce((sum, log) => sum + (log.calories || 0), 0);
   const consumedProtein = logs.reduce((sum, log) => sum + (log.protein || 0), 0);
   const consumedCarbs = logs.reduce((sum, log) => sum + (log.carbs || 0), 0);
@@ -141,7 +146,7 @@ export default function HomeTab() {
             consumedWaterLiters={consumedWater}
             onPlanUpdate={handleWaterPlanUpdate}
           />
-          <RecentActivity logs={logs} />
+          <RecentActivity logs={logs} selectedDate={selectedDate} />
         </ScrollView>
       ) : (
         <AiNutritionPlanScreen

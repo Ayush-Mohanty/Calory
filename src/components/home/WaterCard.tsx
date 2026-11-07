@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Edit02Icon } from '@/constants/hugeicons';
+import { Edit02Icon, PlusIcon } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
 
 interface WaterCardProps {
@@ -17,6 +18,7 @@ export const WaterCard: React.FC<WaterCardProps> = ({
   consumedWaterLiters,
   onPlanUpdate,
 }) => {
+  const router = useRouter();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editWater, setEditWater] = useState(totalWaterLiters.toString());
 
@@ -67,14 +69,23 @@ export const WaterCard: React.FC<WaterCardProps> = ({
     <View style={styles.cardContainer}>
       <View style={styles.headerRow}>
         <Text style={styles.titleText}>Water</Text>
-        <TouchableOpacity onPress={() => setIsEditModalVisible(true)} activeOpacity={0.7} style={styles.editBtn}>
-          <HugeiconsIcon icon={Edit02Icon} size={18} color="#94A3B8" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => router.push('/log-water')} activeOpacity={0.7} style={styles.addBtn}>
+            <HugeiconsIcon icon={PlusIcon} size={18} color="#0EA5E9" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setIsEditModalVisible(true)} activeOpacity={0.7} style={styles.editBtn}>
+            <HugeiconsIcon icon={Edit02Icon} size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.glassesContainer}>
+      <TouchableOpacity 
+        style={styles.glassesContainer} 
+        onPress={() => router.push('/log-water')}
+        activeOpacity={0.7}
+      >
         {glassElements}
-      </View>
+      </TouchableOpacity>
 
       <Text style={styles.glassesLeftText}>
         {glassesLeft} {glassesLeft === 1 ? 'glass' : 'glasses'} left
@@ -140,6 +151,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#0F172A',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(14, 165, 233, 0.1)',
   },
   editBtn: {
     padding: 6,

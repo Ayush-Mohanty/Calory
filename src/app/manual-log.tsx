@@ -45,6 +45,8 @@ export default function ManualLogScreen() {
           protein: 0,
           carbs: 0,
           fat: 0,
+          type: 'exercise',
+          exerciseType: 'Manual',
           createdAt: Date.now(),
         });
       }

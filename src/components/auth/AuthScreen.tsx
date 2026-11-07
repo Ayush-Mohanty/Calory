@@ -69,22 +69,43 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       return;
     }
 
-    if (!isSignInLoaded) return;
+    if (!isSignInLoaded) {
+      setErrorBanner('Authentication service is initializing. Please wait a few seconds and try again.');
+      return;
+    }
     setLoading(true);
 
     try {
-      const result = await signIn.create({
+      console.log('[SignIn] Starting signIn.create for:', email.trim());
+      const createPromise = signIn.create({
         identifier: email.trim(),
         password,
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Sign in request timed out. Please check your network connection.')), 10000)
+      );
+
+      const result = await Promise.race([createPromise, timeoutPromise]);
+      console.log('[SignIn] Result status:', result.status);
+
       if (result.status === 'complete') {
         setSuccessBanner('Signed in successfully! Loading your dashboard...');
-        await setSignInActive({ session: result.createdSessionId });
+        console.log('[SignIn] Setting active session:', result.createdSessionId);
+        
+        const setActivePromise = setSignInActive({ session: result.createdSessionId });
+        const setActiveTimeout = new Promise<void>((resolve) =>
+          setTimeout(() => {
+            console.warn('[SignIn] setSignInActive took >4s, continuing');
+            resolve();
+          }, 4000)
+        );
+        await Promise.race([setActivePromise, setActiveTimeout]);
+        console.log('[SignIn] Session activated successfully');
         onAuthSuccess?.();
       } else {
-        console.log('[SignIn] Result status:', result.status);
-        setErrorBanner('Authentication could not be completed. Please try again.');
+        console.log('[SignIn] Incomplete status:', result.status);
+        setErrorBanner('Authentication could not be completed. Please check your credentials.');
       }
     } catch (err: any) {
       console.error('[SignIn] Error:', err);
@@ -117,7 +138,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       return;
     }
 
-    if (!isSignUpLoaded) return;
+    if (!isSignUpLoaded) {
+      setErrorBanner('Sign up service is initializing. Please wait a moment.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -125,15 +149,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       const firstName = parts[0] || '';
       const lastName = parts.slice(1).join(' ') || '';
 
-      await signUp.create({
-        emailAddress: email.trim(),
-        password,
-        firstName,
-        lastName,
-      });
+      const signUpPromise = (async () => {
+        await signUp.create({
+          emailAddress: email.trim(),
+          password,
+          firstName,
+          lastName,
+        });
 
-      // Send email verification code
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        // Send email verification code
+        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      })();
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Sign up request timed out. Please check your connection.')), 12000)
+      );
+
+      await Promise.race([signUpPromise, timeoutPromise]);
       setIsVerifying(true);
       setSuccessBanner(`Verification code sent to ${email.trim()}.`);
     } catch (err: any) {
@@ -161,13 +193,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     setLoading(true);
 
     try {
-      const result = await signUp.attemptEmailAddressVerification({
+      const verifyPromise = signUp.attemptEmailAddressVerification({
         code: verificationCode.trim(),
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Verification timed out. Please try again.')), 10000)
+      );
+
+      const result = await Promise.race([verifyPromise, timeoutPromise]);
+
       if (result.status === 'complete') {
         setSuccessBanner('Account verified successfully!');
-        await setSignUpActive({ session: result.createdSessionId });
+        const setActivePromise = setSignUpActive({ session: result.createdSessionId });
+        const setActiveTimeout = new Promise<void>((resolve) =>
+          setTimeout(() => resolve(), 4000)
+        );
+        await Promise.race([setActivePromise, setActiveTimeout]);
         onAuthSuccess?.();
       } else {
         setErrorBanner('Verification incomplete. Please re-enter the code.');

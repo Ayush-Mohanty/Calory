@@ -213,6 +213,10 @@ export interface NutritionLog {
   fat: number;
   water?: number; // Liters
   createdAt: number;
+  type?: 'food' | 'exercise';
+  exerciseType?: 'Cardio' | 'Weight Lifting' | 'Manual' | string;
+  intensity?: 'Low' | 'Medium' | 'High' | string;
+  duration?: number; // in minutes
 }
 
 export async function addNutritionLogToFirestore(log: Omit<NutritionLog, 'id'>) {

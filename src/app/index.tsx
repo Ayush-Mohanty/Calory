@@ -49,6 +49,20 @@ export default function HomeScreen() {
     });
   }, [user]);
 
+  // Fallback safety timeout: ensure isOnboardingChecked is never stuck on false for more than 3.5s
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsOnboardingChecked((prev) => {
+        if (!prev) {
+          console.warn('[HomeScreen] Onboarding check safety timer fired, unblocking spinner');
+          return true;
+        }
+        return prev;
+      });
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [isSignedIn]);
+
   // Check onboarding & AI plan status from AsyncStorage and Firestore
   useEffect(() => {
     async function checkStatus() {
@@ -74,15 +88,26 @@ export default function HomeScreen() {
           return;
         }
 
-        // 2. Check Firestore if not found locally
-        const firestoreStatus = await checkUserOnboardingStatusInFirestore(user.id);
-        if (firestoreStatus) {
-          setIsOnboardingCompleted(true);
-          const cloudPlan = await getAiPlanFromFirestore(user.id);
-          if (cloudPlan) {
-            setAiPlan(cloudPlan);
+        // 2. Check Firestore if not found locally with a 2.5s safety timeout
+        const firestoreCheck = (async () => {
+          const firestoreStatus = await checkUserOnboardingStatusInFirestore(user.id);
+          if (firestoreStatus) {
+            setIsOnboardingCompleted(true);
+            const cloudPlan = await getAiPlanFromFirestore(user.id);
+            if (cloudPlan) {
+              setAiPlan(cloudPlan);
+            }
           }
-        }
+        })();
+
+        const timeoutPromise = new Promise((resolve) =>
+          setTimeout(() => {
+            console.warn('[HomeScreen] Firestore onboarding check reached 2.5s limit');
+            resolve(null);
+          }, 2500)
+        );
+
+        await Promise.race([firestoreCheck, timeoutPromise]);
       } catch (err) {
         console.error('Error checking onboarding and plan status:', err);
       } finally {

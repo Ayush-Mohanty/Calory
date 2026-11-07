@@ -9,7 +9,7 @@ type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tab
 
 const { width } = Dimensions.get('window');
 
-function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
+function CustomTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isFabModalVisible, setIsFabModalVisible] = useState(false);
@@ -19,7 +19,7 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
       <View style={styles.tabBarContent}>
         {/* Left Side: 3 Navigation Tabs */}
         <View style={styles.navTabs}>
-          {state.routes.map((route, index) => {
+          {state.routes.map((route: any, index: number) => {
             const { options } = descriptors[route.key];
             const isFocused = state.index === index;
 
@@ -92,14 +92,14 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
                 <Text style={styles.gridText}>Log Exercise</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); router.push('/add-log'); }}>
+              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); router.push('/log-water'); }}>
                 <View style={[styles.iconCircle, { backgroundColor: 'rgba(14, 165, 233, 0.1)' }]}>
                   <HugeiconsIcon icon={DropletIcon} size={24} color="#0EA5E9" />
                 </View>
-                <Text style={styles.gridText}>Drink Water</Text>
+                <Text style={styles.gridText}>Add Water Intake</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); }}>
+              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); router.push('/food-database' as any); }}>
                 <View style={[styles.iconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
                   <HugeiconsIcon icon={Activity01Icon} size={24} color="#F59E0B" />
                 </View>

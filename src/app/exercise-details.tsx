@@ -5,18 +5,17 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft02Icon, FireIcon, Calendar03Icon } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUser } from '@clerk/expo';
-import { addNutritionLogToFirestore } from '@/services/firebase';
+import { getOnboardingFromLocalStorage } from '@/services/storage';
+import { calculateWorkoutCalories } from '@/utils/fitnessCalculator';
 
 export default function ExerciseDetailsScreen() {
   const router = useRouter();
-  const { user } = useUser();
   const { type } = useLocalSearchParams();
   
   const [intensity, setIntensity] = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [duration, setDuration] = useState<string>(''); // empty by default so user can type
   const [activeChip, setActiveChip] = useState<string>(''); // tracks which chip is selected
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(1)).current; // Starts at Medium (1)
 
@@ -48,13 +47,6 @@ export default function ExerciseDetailsScreen() {
     setActiveChip(''); // deselect chip if manual typing
   };
 
-  const formatDateLocal = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-
   const handleContinue = async () => {
     if (!duration) {
       alert('Please select or enter a duration.');
@@ -62,44 +54,57 @@ export default function ExerciseDetailsScreen() {
     }
     const mins = parseInt(duration, 10);
     if (isNaN(mins) || mins <= 0) {
-      alert('Please enter a valid duration.');
+      alert('Please enter a valid duration in minutes.');
       return;
     }
 
-    setIsSubmitting(true);
+    setIsCalculating(true);
     try {
-      // Calculate estimated calories burned
-      let burnRate = 8; // default
-      if (exerciseType === 'Cardio') {
-        burnRate = intensity === 'Low' ? 6 : intensity === 'High' ? 13 : 9;
-      } else {
-        burnRate = intensity === 'Low' ? 4 : intensity === 'High' ? 9 : 6;
-      }
-      const estimatedCalories = Math.round(mins * burnRate);
+      // 1. Fetch user profile data from local storage (height, weight, age, gender)
+      const onboardingData = await getOnboardingFromLocalStorage();
 
-      if (user?.id) {
-        await addNutritionLogToFirestore({
-          userId: user.id,
-          date: formatDateLocal(new Date()),
-          name: `${exerciseType} (${intensity}, ${mins} min)`,
-          calories: estimatedCalories,
-          protein: 0,
-          carbs: 0,
-          fat: 0,
-          createdAt: Date.now(),
-        });
-      }
+      // 2. Calculate calories using Apple Fitness & MET formula
+      const calculatedCalories = calculateWorkoutCalories({
+        workoutType: exerciseType,
+        intensity,
+        durationMinutes: mins,
+        weightKg: onboardingData?.weightKg,
+        heightFeet: onboardingData?.heightFeet,
+        heightInches: onboardingData?.heightInches,
+        gender: onboardingData?.gender,
+        birthDate: onboardingData?.birthDate,
+      });
 
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/(tabs)/home');
-      }
+      // 3. Navigate to workout result screen
+      router.push({
+        pathname: '/workout-result',
+        params: {
+          calories: calculatedCalories.toString(),
+          workoutType: exerciseType,
+          intensity,
+          duration: mins.toString(),
+        },
+      });
     } catch (err) {
-      console.error('Error logging exercise:', err);
-      router.replace('/(tabs)/home');
+      console.error('Error calculating workout calories:', err);
+      // Fallback calculation in case of storage failure
+      const fallbackCalories = calculateWorkoutCalories({
+        workoutType: exerciseType,
+        intensity,
+        durationMinutes: mins,
+      });
+
+      router.push({
+        pathname: '/workout-result',
+        params: {
+          calories: fallbackCalories.toString(),
+          workoutType: exerciseType,
+          intensity,
+          duration: mins.toString(),
+        },
+      });
     } finally {
-      setIsSubmitting(false);
+      setIsCalculating(false);
     }
   };
 
@@ -195,11 +200,11 @@ export default function ExerciseDetailsScreen() {
 
         <View style={styles.bottomBar}>
           <TouchableOpacity 
-            style={[styles.continueButton, isSubmitting && { opacity: 0.7 }]} 
+            style={[styles.continueButton, isCalculating && { opacity: 0.7 }]} 
             onPress={handleContinue}
-            disabled={isSubmitting}
+            disabled={isCalculating}
           >
-            <Text style={styles.continueButtonText}>{isSubmitting ? 'Saving...' : 'Continue'}</Text>
+            <Text style={styles.continueButtonText}>{isCalculating ? 'Calculating...' : 'Continue'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
