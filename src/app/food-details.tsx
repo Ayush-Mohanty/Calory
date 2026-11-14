@@ -21,7 +21,7 @@ import {
   Edit02Icon,
 } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
-import { useUser } from '@clerk/expo';
+import { useUser } from '@/services/auth';
 import { addNutritionLogToFirestore } from '@/services/firebase';
 
 export default function FoodDetailsScreen() {

@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft02Icon, FireIcon, Dumbbell01Icon, Activity01Icon, Time02Icon } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
-import { useUser } from '@clerk/expo';
+import { useUser } from '@/services/auth';
 import { addNutritionLogToFirestore } from '@/services/firebase';
 
 export default function WorkoutResultScreen() {

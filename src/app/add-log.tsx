@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useUser } from '@clerk/expo';
+import { useUser } from '@/services/auth';
 import { addNutritionLogToFirestore } from '@/services/firebase';
 import { AppColors } from '@/constants/colors';
 import { HugeiconsIcon } from '@hugeicons/react-native';

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useUser } from '@clerk/expo';
+import { useUser } from '@/services/auth';
 import { addNutritionLogToFirestore } from '@/services/firebase';
 
 export default function ManualLogScreen() {

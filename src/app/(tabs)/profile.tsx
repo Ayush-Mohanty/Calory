@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth, useUser } from '@clerk/expo';
+import { useAuth, useUser } from '@/services/auth';
 import { AppColors } from '@/constants/colors';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserIcon } from '@/constants/hugeicons';

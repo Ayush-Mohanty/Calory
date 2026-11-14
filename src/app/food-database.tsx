@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUser } from '@clerk/expo';
+import { useUser } from '@/services/auth';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
   ArrowLeft02Icon,

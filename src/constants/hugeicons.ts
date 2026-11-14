@@ -135,3 +135,15 @@ export const Cancel01Icon: [string, Record<string, any>][] = [
 ];
 
 
+
+export const Image01Icon: [string, Record<string, any>][] = [
+  ["rect", { x: "3", y: "3", width: "18", height: "18", rx: "3", stroke: "currentColor", strokeWidth: "1.5", key: "0" }],
+  ["circle", { cx: "8.5", cy: "8.5", r: "1.5", stroke: "currentColor", strokeWidth: "1.5", key: "1" }],
+  ["path", { d: "M3 15L8 10L12 14L15 11L21 17", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "2" }]
+];
+
+export const Camera01Icon: [string, Record<string, any>][] = [
+  ["path", { d: "M2 12.5C2 8.02166 2 5.78249 3.17157 4.14124C4.34315 2.5 6.22876 2.5 10 2.5H14C17.7712 2.5 19.6569 2.5 20.8284 4.14124C22 5.78249 22 8.02166 22 12.5C22 16.9783 22 19.2175 20.8284 20.8588C19.6569 22.5 17.7712 22.5 14 22.5H10C6.22876 22.5 4.34315 22.5 3.17157 20.8588C2 19.2175 2 16.9783 2 12.5Z", stroke: "currentColor", strokeWidth: "1.5", key: "0" }],
+  ["circle", { cx: "12", cy: "12.5", r: "3.5", stroke: "currentColor", strokeWidth: "1.5", key: "1" }],
+  ["path", { d: "M8 7L9.5 5H14.5L16 7", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", key: "2" }]
+];
