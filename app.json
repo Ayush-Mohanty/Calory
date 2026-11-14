@@ -37,6 +37,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Calory to access your photos to select food images for nutrition analysis.",
+          "cameraPermission": "Allow Calory to access your camera to capture food photos for nutrition analysis."
+        }
       ]
     ],
     "experiments": {

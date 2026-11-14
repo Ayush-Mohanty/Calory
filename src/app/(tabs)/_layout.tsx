@@ -5,6 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Home01Icon, Activity01Icon, UserIcon, PlusIcon, Dumbbell01Icon, DropletIcon, FireIcon, SparklesIcon } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScanFoodModal } from '@/components/scan/ScanFoodModal';
 type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
 
 const { width } = Dimensions.get('window');
@@ -13,6 +14,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isFabModalVisible, setIsFabModalVisible] = useState(false);
+  const [isScanModalVisible, setIsScanModalVisible] = useState(false);
 
   return (
     <View style={[styles.tabBarContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -106,7 +108,13 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 <Text style={styles.gridText}>Food Database</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.gridItem} onPress={() => { setIsFabModalVisible(false); }}>
+              <TouchableOpacity 
+                style={styles.gridItem} 
+                onPress={() => { 
+                  setIsFabModalVisible(false); 
+                  setIsScanModalVisible(true);
+                }}
+              >
                 <View style={[styles.iconCircle, { backgroundColor: 'rgba(236, 72, 153, 0.1)' }]}>
                   <HugeiconsIcon icon={FireIcon} size={24} color="#EC4899" />
                   <View style={styles.premiumBadge}>
@@ -120,6 +128,19 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Scan Food Selection Dialog */}
+      <ScanFoodModal
+        visible={isScanModalVisible}
+        onClose={() => setIsScanModalVisible(false)}
+        onSelectImage={(uri) => {
+          setIsScanModalVisible(false);
+          router.push({
+            pathname: '/analyzing-food',
+            params: { imageUri: encodeURIComponent(uri) },
+          });
+        }}
+      />
     </View>
   );
 }
