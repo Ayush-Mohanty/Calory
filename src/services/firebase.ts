@@ -250,3 +250,26 @@ export function subscribeToNutritionLogs(
   return unsubscribe;
 }
 
+export function subscribeToAllUserNutritionLogs(
+  userId: string,
+  callback: (logs: NutritionLog[]) => void
+) {
+  if (!db) return () => {};
+
+  const logsRef = collection(db, 'nutritionLogs');
+  const q = query(logsRef, where('userId', '==', userId));
+
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const logs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as NutritionLog));
+      callback(logs);
+    },
+    (err) => {
+      console.error('[Firebase] Error subscribing to all user logs', err);
+    }
+  );
+
+  return unsubscribe;
+}
+

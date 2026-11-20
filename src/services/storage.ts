@@ -32,6 +32,7 @@ const STORAGE_KEYS = {
   ONBOARDING_DATA: '@calory_onboarding_data',
   ONBOARDING_COMPLETED: '@calory_onboarding_completed',
   AI_NUTRITION_PLAN: '@calory_ai_nutrition_plan',
+  USER_WEIGHT: '@calory_user_weight',
 };
 
 /**
@@ -158,9 +159,47 @@ export async function clearUserFromLocalStorage(): Promise<void> {
       STORAGE_KEYS.ONBOARDING_DATA,
       STORAGE_KEYS.ONBOARDING_COMPLETED,
       STORAGE_KEYS.AI_NUTRITION_PLAN,
+      STORAGE_KEYS.USER_WEIGHT,
     ]);
   } catch (error) {
     console.error('[Storage] Error clearing local storage:', error);
+  }
+}
+
+/**
+ * Save user weight (in kg) to local storage.
+ */
+export async function saveUserWeight(weightKg: number): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.USER_WEIGHT, weightKg.toString());
+    const existing = await getOnboardingFromLocalStorage();
+    if (existing) {
+      existing.weightKg = weightKg;
+      await saveOnboardingToLocalStorage(existing);
+    }
+  } catch (error) {
+    console.error('[Storage] Error saving user weight:', error);
+  }
+}
+
+/**
+ * Get user weight (in kg) from local storage or onboarding profile.
+ */
+export async function getUserWeight(): Promise<number | null> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.USER_WEIGHT);
+    if (raw) {
+      const parsed = parseFloat(raw);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    const onboarding = await getOnboardingFromLocalStorage();
+    if (onboarding && typeof onboarding.weightKg === 'number' && onboarding.weightKg > 0) {
+      return onboarding.weightKg;
+    }
+    return null;
+  } catch (error) {
+    console.error('[Storage] Error getting user weight:', error);
+    return null;
   }
 }
 
