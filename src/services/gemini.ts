@@ -30,7 +30,7 @@ export interface AiNutritionPlan {
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-3.1-flash-lite';
 
 /**
  * Calculates user age from birthDate
@@ -187,15 +187,15 @@ export async function generateNutritionPlan(
     data.goal === 'lose_weight'
       ? 'Lose Body Fat & Get Lean'
       : data.goal === 'gain_weight'
-      ? 'Build Muscle & Lean Weight'
-      : 'Maintain Physique & Optimize Energy';
+        ? 'Build Muscle & Lean Weight'
+        : 'Maintain Physique & Optimize Energy';
 
   const workoutText =
     data.workoutDays === '2-3_days'
       ? '2 to 3 days per week (Light/Moderate)'
       : data.workoutDays === '3-4_days'
-      ? '3 to 4 days per week (Moderate/Active)'
-      : '5 to 6 days per week (Very Active/Intense)';
+        ? '3 to 4 days per week (Moderate/Active)'
+        : '5 to 6 days per week (Very Active/Intense)';
 
   const prompt = `
 You are an elite sports scientist, PhD nutritionist, and certified fitness coach.
@@ -243,7 +243,7 @@ Return ONLY valid JSON matching this exact structure:
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -316,3 +316,258 @@ Return ONLY valid JSON matching this exact structure:
     return generateFallbackPlan(data);
   }
 }
+
+// ==========================================
+// Food Image Analysis with Gemini Vision AI
+// ==========================================
+
+export interface AnalyzedFoodResult {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: string;
+  isAiGenerated: boolean;
+}
+
+// In-memory cache for fast passing of base64 image data between screens
+let cachedFoodImageBase64: string | null = null;
+
+export function setCachedFoodImageBase64(base64: string | null): void {
+  cachedFoodImageBase64 = base64;
+}
+
+export function getCachedFoodImageBase64(): string | null {
+  return cachedFoodImageBase64;
+}
+
+/**
+ * Fallback nutritional values if network/API fails
+ */
+export function getFallbackFoodAnalysis(customName?: string): AnalyzedFoodResult {
+  return {
+    name: customName || 'Unrecognized Food Item',
+    calories: 350,
+    protein: 15,
+    carbs: 45,
+    fat: 12,
+    servingSize: '1 serving',
+    isAiGenerated: false,
+  };
+}
+
+/**
+ * Strips markdown code blocks (```json ... ```) from model output
+ */
+function cleanJsonString(str: string): string {
+  let cleaned = str.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.substring(7);
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.substring(3);
+  }
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.substring(0, cleaned.length - 3);
+  }
+  return cleaned.trim();
+}
+
+/**
+ * Universal helper to convert local image URIs to clean Base64 string
+ */
+export async function convertImageUriToBase64(uri: string): Promise<string> {
+  if (!uri) throw new Error('Missing image URI');
+
+  // If already base64 data URL
+  if (uri.startsWith('data:')) {
+    const parts = uri.split(',');
+    return parts[1] || '';
+  }
+
+  // 1. Try expo-file-system/legacy
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const FileSystem = require('expo-file-system/legacy');
+    if (FileSystem && typeof FileSystem.readAsStringAsync === 'function') {
+      const b64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType?.Base64 || 'base64',
+      });
+      if (b64) return b64;
+    }
+  } catch (fsErr) {
+    // Continue to next fallback
+  }
+
+  // 2. Universal fetch + FileReader fallback (works across React Native & Web)
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        if (result) {
+          const b64Part = result.includes(',') ? result.split(',')[1] : result;
+          resolve(b64Part);
+        } else {
+          reject(new Error('Empty FileReader output'));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    if (base64) return base64;
+  } catch (blobErr) {
+    // Continue
+  }
+
+  throw new Error('Failed to convert image to base64');
+}
+
+/**
+ * Sends a food image (base64) to Google Gemini AI to analyze meal name,
+ * portion size, calories, protein, carbs, and fat in structured JSON.
+ * Uses Google's free Gemini vision models (gemini-3.1-flash-lite, gemini-3.7-flash).
+ */
+export async function analyzeFoodImageWithGemini(
+  base64Image: string,
+  mimeType: string = 'image/jpeg'
+): Promise<AnalyzedFoodResult> {
+  const cleanBase64 = base64Image
+    .replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '')
+    .trim();
+
+  if (!cleanBase64) {
+    throw new Error('Image data is empty or invalid.');
+  }
+
+  const prompt = `You are an expert AI food computer vision system and clinical nutritionist.
+Analyze the food or meal in this image with high accuracy.
+Identify the EXACT dish or food items present on the plate or container.
+Calculate realistic nutritional values for the visible portion.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "name": "Specific Food Name (e.g., Pepperoni Pizza, Chicken Biryani, Double Cheeseburger, Avocado Toast with Egg, Salmon Nigiri, Greek Salad)",
+  "calories": 520,
+  "protein": 32,
+  "carbs": 44,
+  "fat": 22,
+  "servingSize": "1 plate (350g)"
+}
+
+CRITICAL RULES:
+1. "name": The exact culinary name of the detected food. Be specific (e.g. "Spaghetti Carbonara", "Paneer Tikka with Naan", "Caesar Salad with Chicken", "Chocolate Donut"). DO NOT use generic phrases like "Healthy Meal", "Diet Meal", or "Balanced Meal". If there is food in the image, identify the actual dish!
+2. If the image clearly contains NO food or drinks, return {"name": "No Food Detected", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "servingSize": "0g"}.
+3. "calories": Total energy in kcal as an integer number.
+4. "protein": Protein in grams as a number.
+5. "carbs": Total carbohydrates in grams as a number.
+6. "fat": Total fats in grams as a number.
+7. "servingSize": Estimated portion size (e.g. "1 bowl (300g)", "1 burger (250g)", "2 slices (220g)").
+8. Return ONLY pure JSON. No markdown code blocks (no \`\`\`json), no introductory text.`;
+
+  if (!GEMINI_API_KEY) {
+    throw new Error('Missing Gemini API Key. Please check your environment configuration.');
+  }
+
+  // Free Gemini models in order of stability and speed
+  const modelsToTry = [
+    'gemini-3.1-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-flash-latest',
+  ];
+
+  let lastError: any = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: cleanBase64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        },
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`[Gemini Vision] Model ${model} returned ${response.status}: ${errorText}`);
+        lastError = new Error(`Model ${model} error (${response.status})`);
+        // If 404 or 503 or 429, try next model in the list
+        continue;
+      }
+
+      const resJson = await response.json();
+      const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!rawText) {
+        console.warn(`[Gemini Vision] Empty response from model ${model}`);
+        continue;
+      }
+
+      const cleanedJson = cleanJsonString(rawText);
+      const parsed = JSON.parse(cleanedJson);
+
+      const calories = Math.max(0, Math.round(Number(parsed.calories) || 0));
+      const protein = Math.max(0, Math.round((Number(parsed.protein) || 0) * 10) / 10);
+      const carbs = Math.max(0, Math.round((Number(parsed.carbs) || 0) * 10) / 10);
+      const fat = Math.max(0, Math.round((Number(parsed.fat) || 0) * 10) / 10);
+      const name =
+        typeof parsed.name === 'string' && parsed.name.trim()
+          ? parsed.name.trim()
+          : 'Detected Food';
+      const servingSize =
+        typeof parsed.servingSize === 'string' && parsed.servingSize.trim()
+          ? parsed.servingSize.trim()
+          : '1 serving';
+
+      const calculatedCalories =
+        calories > 0
+          ? calories
+          : protein > 0 || carbs > 0 || fat > 0
+          ? Math.round(protein * 4 + carbs * 4 + fat * 9)
+          : 0;
+
+      return {
+        name,
+        calories: calculatedCalories,
+        protein,
+        carbs,
+        fat,
+        servingSize,
+        isAiGenerated: true,
+      };
+    } catch (err: any) {
+      console.warn(`[Gemini Vision] Error trying model ${model}:`, err?.message || err);
+      lastError = err;
+    }
+  }
+
+  // If all live models failed, re-throw so the UI can show a retry button or handle cleanly
+  throw (
+    lastError ||
+    new Error('Food recognition service is temporarily unavailable. Please try again.')
+  );
+}
+

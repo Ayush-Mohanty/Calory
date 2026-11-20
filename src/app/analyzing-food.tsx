@@ -1,27 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  ScrollView,
-  Dimensions,
-  Platform,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { HugeiconsIcon } from '@hugeicons/react-native';
+import { AppColors } from '@/constants/colors';
 import {
   ArrowLeft02Icon,
   ArrowRight02Icon,
-  Tick02Icon,
-  SparklesIcon,
   Image01Icon,
+  SparklesIcon,
+  Tick02Icon,
 } from '@/constants/hugeicons';
-import { AppColors } from '@/constants/colors';
+import {
+  AnalyzedFoodResult,
+  analyzeFoodImageWithGemini,
+  convertImageUriToBase64,
+  getCachedFoodImageBase64,
+  getFallbackFoodAnalysis,
+} from '@/services/gemini';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -64,53 +71,102 @@ export default function AnalyzingFoodScreen() {
   const [step2Status, setStep2Status] = useState<StepStatus>('pending');
   const [step3Status, setStep3Status] = useState<StepStatus>('pending');
   const [isCompleted, setIsCompleted] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
-  // Simulated AI nutrition result
-  const detectedMeal = {
-    name: 'Grilled Salmon & Quinoa Bowl',
-    calories: '520',
-    protein: '44',
-    carbs: '48',
-    fat: '16',
-    servingSize: '1 bowl (380g)',
-  };
+  // AI analyzed food result state
+  const [detectedMeal, setDetectedMeal] = useState<AnalyzedFoodResult | null>(null);
 
   useEffect(() => {
-    // Step 1: Analyzing food (0ms -> 1500ms)
-    const timer1 = setTimeout(() => {
+    let isMounted = true;
+
+    async function runFoodVisionAnalysis() {
+      try {
+        setAnalysisError(null);
+        setStep1Status('loading');
+        setStep2Status('pending');
+        setStep3Status('pending');
+        setIsCompleted(false);
+
+        // 1. Retrieve image base64 (either cached in memory or read from file URI)
+        let base64 = getCachedFoodImageBase64();
+        if (!base64 && imageUri) {
+          try {
+            base64 = await convertImageUriToBase64(imageUri);
+          } catch (readErr) {
+            console.warn('[AnalyzingFood] Failed to convert image to base64:', readErr);
+          }
+        }
+
+        // Allow at least 600ms for Step 1 visual feedback ("Analyzing food")
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        if (!isMounted) return;
+
+        // Transition: Step 1 completed -> Step 2 loading ("Getting Nutrition data")
+        setStep1Status('completed');
+        setStep2Status('loading');
+
+        // 2. Call Gemini AI Vision model
+        const mimeType = imageUri.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+        const aiResult = await analyzeFoodImageWithGemini(base64 || '', mimeType);
+        if (!isMounted) return;
+
+        // Transition: Step 2 completed -> Step 3 loading ("Get final result")
+        setStep2Status('completed');
+        setStep3Status('loading');
+
+        // Allow 400ms for Step 3 compilation
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        if (!isMounted) return;
+
+        // Transition: Step 3 completed -> Final result ready
+        setStep3Status('completed');
+        setDetectedMeal(aiResult);
+        setIsCompleted(true);
+      } catch (error: any) {
+        console.error('[AnalyzingFood] Analysis error:', error);
+        if (!isMounted) return;
+        setAnalysisError(error?.message || 'Unable to recognize food. Tap retry to analyze again.');
+        setStep1Status('completed');
+        setStep2Status('completed');
+        setStep3Status('completed');
+        const fallback = getFallbackFoodAnalysis('Food Item');
+        setDetectedMeal(fallback);
+        setIsCompleted(true);
+      }
+    }
+
+    if (imageUri || getCachedFoodImageBase64()) {
+      runFoodVisionAnalysis();
+    } else {
+      const fallback = getFallbackFoodAnalysis('Food Item');
+      setDetectedMeal(fallback);
       setStep1Status('completed');
-      setStep2Status('loading');
-    }, 1500);
-
-    // Step 2: Getting Nutrition data (1500ms -> 3200ms)
-    const timer2 = setTimeout(() => {
       setStep2Status('completed');
-      setStep3Status('loading');
-    }, 3200);
-
-    // Step 3: Get final result (3200ms -> 4600ms)
-    const timer3 = setTimeout(() => {
       setStep3Status('completed');
       setIsCompleted(true);
-    }, 4600);
+    }
 
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
+      isMounted = false;
     };
-  }, []);
+  }, [imageUri, retryTrigger]);
+
+  const handleRetry = () => {
+    setRetryTrigger((prev) => prev + 1);
+  };
 
   const handleContinue = () => {
+    if (!detectedMeal) return;
     // Navigate to food-details with the analyzed meal data pre-filled
     router.replace({
       pathname: '/food-details',
       params: {
         name: detectedMeal.name,
-        calories: detectedMeal.calories,
-        protein: detectedMeal.protein,
-        carbs: detectedMeal.carbs,
-        fat: detectedMeal.fat,
+        calories: String(detectedMeal.calories),
+        protein: String(detectedMeal.protein),
+        carbs: String(detectedMeal.carbs),
+        fat: String(detectedMeal.fat),
         servingSize: detectedMeal.servingSize,
       },
     });
@@ -124,7 +180,7 @@ export default function AnalyzingFoodScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      {/* Header with Back Button and Heading 'Analyzing Food' */}
+      {/* Header with Back Button and Heading 'Analyzing Food' below */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -132,12 +188,10 @@ export default function AnalyzingFoodScreen() {
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color="#FFFFFF" />
+          <HugeiconsIcon icon={ArrowLeft02Icon} size={24} color="#0F172A" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Analyzing Food</Text>
-
-        <View style={styles.headerRightSpacer} />
       </View>
 
       <ScrollView
@@ -155,7 +209,7 @@ export default function AnalyzingFoodScreen() {
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <HugeiconsIcon icon={Image01Icon} size={48} color="#64748B" />
+                <HugeiconsIcon icon={Image01Icon} size={48} color="#94A3B8" />
                 <Text style={styles.imagePlaceholderText}>No Image Selected</Text>
               </View>
             )}
@@ -242,18 +296,46 @@ export default function AnalyzingFoodScreen() {
         </View>
 
         {/* Meal Preview Snippet when Completed */}
-        {isCompleted && (
+        {isCompleted && detectedMeal && (
           <View style={styles.resultSummaryCard}>
             <View style={styles.resultHeader}>
-              <Text style={styles.resultLabel}>Identified Meal</Text>
+              <View style={styles.resultBadge}>
+                <HugeiconsIcon icon={SparklesIcon} size={12} color="#166534" />
+                <Text style={styles.resultLabel}>AI Identified Meal</Text>
+              </View>
               <Text style={styles.resultCalories}>{detectedMeal.calories} kcal</Text>
             </View>
             <Text style={styles.resultMealName}>{detectedMeal.name}</Text>
+            <Text style={styles.resultServing}>Portion: {detectedMeal.servingSize}</Text>
             <View style={styles.resultMacroRow}>
-              <Text style={styles.macroPill}>Protein: {detectedMeal.protein}g</Text>
-              <Text style={styles.macroPill}>Carbs: {detectedMeal.carbs}g</Text>
-              <Text style={styles.macroPill}>Fat: {detectedMeal.fat}g</Text>
+              <View style={styles.macroPill}>
+                <Text style={styles.macroPillLabel}>Protein</Text>
+                <Text style={styles.macroPillValue}>{detectedMeal.protein}g</Text>
+              </View>
+              <View style={styles.macroPill}>
+                <Text style={styles.macroPillLabel}>Carbs</Text>
+                <Text style={styles.macroPillValue}>{detectedMeal.carbs}g</Text>
+              </View>
+              <View style={styles.macroPill}>
+                <Text style={styles.macroPillLabel}>Fat</Text>
+                <Text style={styles.macroPillValue}>{detectedMeal.fat}g</Text>
+              </View>
             </View>
+          </View>
+        )}
+
+        {/* Error or Notice Alert if analysis encountered an issue */}
+        {analysisError && (
+          <View style={styles.errorNoticeCard}>
+            <Text style={styles.errorNoticeTitle}>AI Recognition Notice</Text>
+            <Text style={styles.errorNoticeText}>{analysisError}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={handleRetry}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.retryButtonText}>Retry AI Scan</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -299,38 +381,45 @@ const squareSize = Math.min(width - 56, 280);
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#090C10',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-    backgroundColor: '#0D1117',
+    paddingTop: Platform.OS === 'android' ? 12 : 8,
+    paddingBottom: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-  headerRightSpacer: {
-    width: 40,
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.5,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 8,
     paddingBottom: 24,
     alignItems: 'center',
   },
@@ -343,21 +432,21 @@ const styles = StyleSheet.create({
     height: squareSize,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#12161F',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: 'rgba(41, 143, 80, 0.4)',
+    borderColor: '#E2E8F0',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: AppColors.primary,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 14,
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
       },
       android: {
-        elevation: 6,
+        elevation: 4,
       },
     }),
   },
@@ -371,7 +460,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   imagePlaceholderText: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -382,12 +471,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(9, 12, 16, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   scanBadgeText: {
     color: '#6ee7b7',
@@ -400,17 +489,28 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#4ec57c',
+    backgroundColor: '#298f50',
     opacity: 0.8,
   },
   progressCard: {
     width: '100%',
-    backgroundColor: '#12161F',
+    backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#E2E8F0',
     marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   progressCardHeader: {
     flexDirection: 'row',
@@ -419,7 +519,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   progressCardTitle: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -427,18 +527,18 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
   },
   statusPillCompleted: {
-    backgroundColor: 'rgba(41, 143, 80, 0.15)',
+    backgroundColor: 'rgba(41, 143, 80, 0.12)',
   },
   statusPillText: {
-    color: '#F59E0B',
+    color: '#D97706',
     fontSize: 11.5,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   statusPillTextCompleted: {
-    color: '#6ee7b7',
+    color: '#166534',
   },
   stepsList: {
     gap: 4,
@@ -468,31 +568,29 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#4ec57c',
   },
   checkboxLoading: {
     width: 24,
     height: 24,
     borderRadius: 7,
-    backgroundColor: 'rgba(41, 143, 80, 0.15)',
+    backgroundColor: 'rgba(41, 143, 80, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(41, 143, 80, 0.4)',
+    borderColor: 'rgba(41, 143, 80, 0.3)',
   },
   checkboxPending: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F1F5F9',
   },
   connectingLine: {
     width: 2,
     height: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#E2E8F0',
     marginVertical: 2,
   },
   connectingLineActive: {
@@ -510,15 +608,17 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   stepTitle: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 14.5,
     fontWeight: '600',
   },
   stepTitleCompleted: {
-    color: '#FFFFFF',
+    color: '#0F172A',
+    fontWeight: '700',
   },
   stepTitleLoading: {
-    color: '#6ee7b7',
+    color: '#166534',
+    fontWeight: '700',
   },
   stepSubtitle: {
     color: '#64748B',
@@ -527,64 +627,104 @@ const styles = StyleSheet.create({
   },
   resultSummaryCard: {
     width: '100%',
-    backgroundColor: '#161B26',
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(41, 143, 80, 0.3)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(41, 143, 80, 0.35)',
     marginBottom: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   resultHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  resultBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(41, 143, 80, 0.1)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
   resultLabel: {
-    color: '#94A3B8',
-    fontSize: 12,
-    fontWeight: '600',
+    color: '#166534',
+    fontSize: 11.5,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   resultCalories: {
-    color: '#4ec57c',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#166534',
+    fontSize: 16,
+    fontWeight: '800',
   },
   resultMealName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 10,
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  resultServing: {
+    color: '#64748B',
+    fontSize: 12.5,
+    fontWeight: '500',
+    marginBottom: 12,
   },
   resultMacroRow: {
     flexDirection: 'row',
     gap: 8,
   },
   macroPill: {
-    color: '#94A3B8',
-    fontSize: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    overflow: 'hidden',
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  macroPillLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  macroPillValue: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   footerContainer: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
-    backgroundColor: '#0D1117',
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   continueButtonWrapper: {
     borderRadius: 16,
     overflow: 'hidden',
   },
   continueButtonDisabled: {
-    opacity: 0.75,
+    opacity: 0.7,
   },
   continueButton: {
     height: 52,
@@ -603,5 +743,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
   },
+  errorNoticeCard: {
+    width: '100%',
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  errorNoticeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#92400E',
+    marginBottom: 4,
+  },
+  errorNoticeText: {
+    fontSize: 12,
+    color: '#B45309',
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  retryButton: {
+    backgroundColor: '#F59E0B',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
 });
-

@@ -19,6 +19,7 @@ import {
   ArrowRight02Icon,
 } from '@/constants/hugeicons';
 import { AppColors } from '@/constants/colors';
+import { setCachedFoodImageBase64 } from '@/services/gemini';
 
 interface ScanFoodModalProps {
   visible: boolean;
@@ -64,12 +65,16 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.85,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedUri = result.assets[0].uri;
+        const asset = result.assets[0];
+        if (asset.base64) {
+          setCachedFoodImageBase64(asset.base64);
+        }
         onClose();
-        onSelectImage(selectedUri);
+        onSelectImage(asset.uri);
       }
     } catch (error: any) {
       console.error('[ScanFoodModal] Camera error:', error);
@@ -90,18 +95,21 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
     setLoadingAction('gallery');
 
     try {
-      // In iOS/Android modern Expo, launchImageLibraryAsync automatically presents the system picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.85,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedUri = result.assets[0].uri;
+        const asset = result.assets[0];
+        if (asset.base64) {
+          setCachedFoodImageBase64(asset.base64);
+        }
         onClose();
-        onSelectImage(selectedUri);
+        onSelectImage(asset.uri);
       }
     } catch (error: any) {
       console.error('[ScanFoodModal] Gallery error:', error);
@@ -144,7 +152,7 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={18} color="#94A3B8" />
+              <HugeiconsIcon icon={Cancel01Icon} size={18} color="#64748B" />
             </TouchableOpacity>
           </View>
 
@@ -162,7 +170,7 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
               activeOpacity={0.85}
               disabled={loadingAction !== null}
             >
-              <View style={[styles.iconCircle, { backgroundColor: 'rgba(41, 143, 80, 0.15)' }]}>
+              <View style={[styles.iconCircle, { backgroundColor: 'rgba(41, 143, 80, 0.12)' }]}>
                 {loadingAction === 'camera' ? (
                   <ActivityIndicator size="small" color={AppColors.primary} />
                 ) : (
@@ -178,7 +186,7 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
               </View>
 
               <View style={styles.chevronWrapper}>
-                <HugeiconsIcon icon={ArrowRight02Icon} size={18} color="#64748B" />
+                <HugeiconsIcon icon={ArrowRight02Icon} size={18} color="#94A3B8" />
               </View>
             </TouchableOpacity>
 
@@ -189,11 +197,11 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
               activeOpacity={0.85}
               disabled={loadingAction !== null}
             >
-              <View style={[styles.iconCircle, { backgroundColor: 'rgba(14, 165, 233, 0.15)' }]}>
+              <View style={[styles.iconCircle, { backgroundColor: 'rgba(14, 165, 233, 0.12)' }]}>
                 {loadingAction === 'gallery' ? (
-                  <ActivityIndicator size="small" color="#0EA5E9" />
+                  <ActivityIndicator size="small" color="#0284C7" />
                 ) : (
-                  <HugeiconsIcon icon={Image01Icon} size={24} color="#0EA5E9" />
+                  <HugeiconsIcon icon={Image01Icon} size={24} color="#0284C7" />
                 )}
               </View>
 
@@ -205,7 +213,7 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
               </View>
 
               <View style={styles.chevronWrapper}>
-                <HugeiconsIcon icon={ArrowRight02Icon} size={18} color="#64748B" />
+                <HugeiconsIcon icon={ArrowRight02Icon} size={18} color="#94A3B8" />
               </View>
             </TouchableOpacity>
           </View>
@@ -227,7 +235,7 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 8, 12, 0.78)',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -238,20 +246,20 @@ const styles = StyleSheet.create({
   dialogCard: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#12161F',
+    backgroundColor: '#FFFFFF',
     borderRadius: 28,
     padding: 22,
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.45,
-        shadowRadius: 20,
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
       },
       android: {
-        elevation: 10,
+        elevation: 12,
       },
     }),
   },
@@ -264,13 +272,13 @@ const styles = StyleSheet.create({
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(41, 143, 80, 0.15)',
+    backgroundColor: 'rgba(41, 143, 80, 0.1)',
     borderRadius: 20,
     paddingVertical: 5,
     paddingHorizontal: 10,
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(41, 143, 80, 0.3)',
+    borderColor: 'rgba(41, 143, 80, 0.2)',
   },
   badgeIcon: {
     width: 18,
@@ -281,8 +289,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    color: '#6ee7b7',
-    fontSize: 10.5,
+    color: '#166534',
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
@@ -290,21 +298,21 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 6,
-    letterSpacing: 0.2,
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 13.5,
-    lineHeight: 19,
-    color: '#94A3B8',
+    lineHeight: 20,
+    color: '#64748B',
     marginBottom: 20,
   },
   optionsContainer: {
@@ -314,11 +322,11 @@ const styles = StyleSheet.create({
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#161B26',
+    backgroundColor: '#F8FAFC',
     borderRadius: 18,
     padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     gap: 14,
   },
   iconCircle: {
@@ -332,9 +340,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 15.5,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 3,
   },
   optionDescription: {
@@ -349,10 +357,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#F1F5F9',
   },
   cancelText: {
-    color: '#94A3B8',
+    color: '#475569',
     fontSize: 14,
     fontWeight: '600',
   },
