@@ -10,7 +10,8 @@ type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tab
 
 const { width } = Dimensions.get('window');
 
-function CustomTabBar({ state, descriptors, navigation }: any) {
+function CustomTabBar(props: any) {
+  const { state, descriptors, navigation, emitter, navigateToTab } = props;
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isFabModalVisible, setIsFabModalVisible] = useState(false);
@@ -22,18 +23,34 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         {/* Left Side: 3 Navigation Tabs */}
         <View style={styles.navTabs}>
           {state.routes.map((route: any, index: number) => {
-            const { options } = descriptors[route.key];
+            const { options } = descriptors?.[route.key] || {};
             const isFocused = state.index === index;
 
             const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
+              let event: any = null;
 
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
+              if (emitter && typeof emitter.emit === 'function') {
+                event = emitter.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+              } else if (navigation && typeof navigation.emit === 'function') {
+                event = navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+              }
+
+              if (!isFocused && (!event || !event.defaultPrevented)) {
+                if (typeof navigateToTab === 'function') {
+                  navigateToTab(route.key);
+                } else if (navigation && typeof navigation.navigate === 'function') {
+                  navigation.navigate(route.name);
+                } else {
+                  router.navigate(`/(tabs)/${route.name}` as any);
+                }
               }
             };
 
