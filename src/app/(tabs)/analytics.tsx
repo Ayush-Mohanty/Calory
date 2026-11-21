@@ -60,6 +60,9 @@ export default function AnalyticsTab() {
   const [isWeightModalVisible, setIsWeightModalVisible] = useState(false);
   const [weightInput, setWeightInput] = useState('');
 
+  // Daily Streak details modal state
+  const [isStreakModalVisible, setIsStreakModalVisible] = useState(false);
+
   // Format date to local YYYY-MM-DD
   const formatDateStr = (d: Date) => {
     const y = d.getFullYear();
@@ -208,8 +211,12 @@ export default function AnalyticsTab() {
       >
         {/* Two Cards in a Row: 1. Daily Streak, 2. My Weight */}
         <View style={styles.cardsRow}>
-          {/* Card 1: Daily Streak */}
-          <View style={styles.metricCard}>
+          {/* Card 1: Daily Streak (Tap to view details modal) */}
+          <TouchableOpacity
+            style={styles.metricCard}
+            activeOpacity={0.85}
+            onPress={() => setIsStreakModalVisible(true)}
+          >
             <View style={styles.cardTopRow}>
               {/* Fire Icon from assets/images folder */}
               <View style={styles.fireIconWrapper}>
@@ -257,7 +264,7 @@ export default function AnalyticsTab() {
                 </View>
               ))}
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* Card 2: My Weight */}
           <View style={styles.metricCard}>
@@ -439,6 +446,121 @@ export default function AnalyticsTab() {
                 <Text style={styles.modalSaveText}>Save Weight</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Daily Streak Details Dialog Modal */}
+      <Modal
+        visible={isStreakModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsStreakModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsStreakModalVisible(false)}
+          />
+          <View style={styles.streakModalCard}>
+            {/* Dialog Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Daily Streak Details</Text>
+              <TouchableOpacity
+                onPress={() => setIsStreakModalVisible(false)}
+                style={styles.modalCloseBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Consistency is key to reaching your fitness and body transformation goals.
+            </Text>
+
+            {/* Same Card design in Bigger Size */}
+            <View style={styles.enlargedStreakCard}>
+              <View style={styles.enlargedCardTopRow}>
+                {/* Fire Icon from assets/images folder (Bigger) */}
+                <View style={styles.enlargedFireIconWrapper}>
+                  <Image
+                    source={require('../../../assets/images/fire.png')}
+                    style={styles.enlargedFireIcon}
+                    resizeMode="contain"
+                  />
+                </View>
+
+                {/* Streak Count & 'Keep it Going 🔥' Chip on the right */}
+                <View style={styles.streakCountRightContainer}>
+                  <View style={styles.enlargedStreakBadge}>
+                    <Text style={styles.enlargedStreakBadgeText}>
+                      {streakCount} {streakCount === 1 ? 'Day' : 'Days'}
+                    </Text>
+                  </View>
+                  <View style={styles.keepGoingChip}>
+                    <Text style={styles.keepGoingChipText}>Keep it Going 🔥</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Text as 'Day Streak' (Bigger) */}
+              <Text style={styles.enlargedCardHeading}>Day Streak</Text>
+
+              {/* Current week streak data with checkbox and days: S, M, T, W, T, F, S (Bigger) */}
+              <View style={styles.enlargedWeekDaysContainer}>
+                {weekDays.map((day, idx) => (
+                  <View key={`modal-${day.dateString}-${idx}`} style={styles.enlargedDayColumn}>
+                    <Text
+                      style={[
+                        styles.enlargedDayLetter,
+                        day.isToday && styles.enlargedDayLetterToday,
+                      ]}
+                    >
+                      {day.dayName}
+                    </Text>
+
+                    {/* Checkbox (Bigger) */}
+                    <View
+                      style={[
+                        styles.enlargedCheckbox,
+                        day.hasActivity
+                          ? styles.enlargedCheckboxChecked
+                          : styles.enlargedCheckboxUnchecked,
+                        day.isToday && !day.hasActivity && styles.enlargedCheckboxTodayPending,
+                      ]}
+                    >
+                      {day.hasActivity ? (
+                        <HugeiconsIcon icon={Tick02Icon} size={13} color="#FFFFFF" />
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Motivational / Details Footer Banner */}
+            <View style={styles.streakDetailInfoBox}>
+              <View style={styles.streakInfoRow}>
+                <Text style={styles.streakInfoLabel}>This Week's Activity</Text>
+                <Text style={styles.streakInfoValue}>{activeDaysThisWeek} of 7 days logged</Text>
+              </View>
+              <Text style={styles.streakInfoDescription}>
+                {activeDatesSet.has(todayStr)
+                  ? "🎉 You've logged activity today! Your streak is active."
+                  : '⚡ Log at least one food, workout, or water entry today to keep your streak alive!'}
+              </Text>
+            </View>
+
+            {/* Close Action Button */}
+            <TouchableOpacity
+              style={styles.streakModalDoneBtn}
+              onPress={() => setIsStreakModalVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.streakModalDoneText}>Got it</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -852,6 +974,171 @@ const styles = StyleSheet.create({
   },
   modalSaveText: {
     fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  streakModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  enlargedStreakCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+  },
+  enlargedCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  enlargedFireIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+  },
+  enlargedFireIcon: {
+    width: 28,
+    height: 28,
+  },
+  streakCountRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  enlargedStreakBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  enlargedStreakBadgeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#DC2626',
+  },
+  keepGoingChip: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  keepGoingChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#C2410C',
+  },
+  enlargedCardHeading: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  enlargedWeekDaysContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
+  enlargedDayColumn: {
+    alignItems: 'center',
+    gap: 7,
+  },
+  enlargedDayLetter: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  enlargedDayLetterToday: {
+    color: AppColors.primary,
+    fontWeight: '800',
+  },
+  enlargedCheckbox: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enlargedCheckboxChecked: {
+    backgroundColor: AppColors.primary,
+  },
+  enlargedCheckboxUnchecked: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.8,
+    borderColor: '#CBD5E1',
+  },
+  enlargedCheckboxTodayPending: {
+    borderColor: AppColors.primary,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.8,
+  },
+  streakDetailInfoBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginBottom: 16,
+  },
+  streakInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  streakInfoLabel: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  streakInfoValue: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: AppColors.primary,
+  },
+  streakInfoDescription: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 17,
+  },
+  streakModalDoneBtn: {
+    backgroundColor: AppColors.primary,
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakModalDoneText: {
+    fontSize: 14.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },
