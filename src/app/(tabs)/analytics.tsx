@@ -13,8 +13,9 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { HugeiconsIcon } from '@hugeicons/react-native';
+import { BarChart } from 'react-native-chart-kit';
 import {
   WeightScale01Icon,
   Tick02Icon,
@@ -49,6 +50,7 @@ interface WeekDayItem {
 }
 
 export default function AnalyticsTab() {
+  const router = useRouter();
   const { user } = useUser();
 
   const [logs, setLogs] = useState<NutritionLog[]>([]);
@@ -62,6 +64,9 @@ export default function AnalyticsTab() {
 
   // Daily Streak details modal state
   const [isStreakModalVisible, setIsStreakModalVisible] = useState(false);
+
+  // Tab state for Calorie Chart (Burned vs Consumed)
+  const [calorieChartTab, setCalorieChartTab] = useState<'burned' | 'consumed'>('burned');
 
   // Format date to local YYYY-MM-DD
   const formatDateStr = (d: Date) => {
@@ -170,6 +175,38 @@ export default function AnalyticsTab() {
   const totalWorkouts = currentWeekLogs.filter((l) => l.type === 'exercise').length;
   const totalWaterLitres = currentWeekLogs.reduce((sum, l) => sum + (l.water || 0), 0);
 
+  // 7-day calories calculation for current week (Sun - Sat)
+  const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDayCaloriesBurned: number[] = [];
+  const weekDayCaloriesConsumed: number[] = [];
+
+  weekDays.forEach((day) => {
+    const dayLogs = currentWeekLogs.filter((l) => l.date === day.dateString);
+    const burned = dayLogs
+      .filter((l) => l.type === 'exercise')
+      .reduce((sum, l) => sum + (Number(l.calories) || 0), 0);
+    const consumed = dayLogs
+      .filter((l) => l.type === 'food' || !l.type)
+      .reduce((sum, l) => sum + (Number(l.calories) || 0), 0);
+    weekDayCaloriesBurned.push(Math.round(burned));
+    weekDayCaloriesConsumed.push(Math.round(consumed));
+  });
+
+  const totalWeekBurned = weekDayCaloriesBurned.reduce((a, b) => a + b, 0);
+  const totalWeekConsumed = weekDayCaloriesConsumed.reduce((a, b) => a + b, 0);
+  const netWeekCalories = totalWeekConsumed - totalWeekBurned;
+  const activeChartData =
+    calorieChartTab === 'burned' ? weekDayCaloriesBurned : weekDayCaloriesConsumed;
+
+  const calorieChartData = {
+    labels: dayNamesShort,
+    datasets: [
+      {
+        data: activeChartData,
+      },
+    ],
+  };
+
   // Goal & Target helper texts
   const goalText =
     onboardingData?.goal === 'lose_weight'
@@ -266,8 +303,12 @@ export default function AnalyticsTab() {
             </View>
           </TouchableOpacity>
 
-          {/* Card 2: My Weight */}
-          <View style={styles.metricCard}>
+          {/* Card 2: My Weight (Tap to navigate to Update Weight screen) */}
+          <TouchableOpacity
+            style={styles.metricCard}
+            activeOpacity={0.85}
+            onPress={() => router.push('/update-weight')}
+          >
             <View style={styles.cardTopRow}>
               <View style={styles.scaleIconWrapper}>
                 <HugeiconsIcon
@@ -276,15 +317,10 @@ export default function AnalyticsTab() {
                   color={AppColors.primary}
                 />
               </View>
-              <TouchableOpacity
-                onPress={handleOpenWeightModal}
-                style={styles.editPill}
-                activeOpacity={0.7}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
+              <View style={styles.editPill}>
                 <HugeiconsIcon icon={Edit02Icon} size={11} color="#475569" />
                 <Text style={styles.editPillText}>Edit</Text>
-              </TouchableOpacity>
+              </View>
             </View>
 
             <Text style={styles.cardHeading}>My Weight</Text>
@@ -299,6 +335,131 @@ export default function AnalyticsTab() {
                 {goalText}
               </Text>
             </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Weekly Calories Bar Chart Card */}
+        <View style={styles.chartCard}>
+          <View style={styles.chartHeader}>
+            <View>
+              <Text style={styles.chartTitle}>Weekly Calories</Text>
+              <Text style={styles.chartSubtitle}>Current Week (Last 7 Days)</Text>
+            </View>
+
+            {/* Toggle Pills: Burned vs Consumed */}
+            <View style={styles.tabPillContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.tabPill,
+                  calorieChartTab === 'burned' && styles.tabPillActiveBurned,
+                ]}
+                onPress={() => setCalorieChartTab('burned')}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.tabPillText,
+                    calorieChartTab === 'burned' && styles.tabPillTextActive,
+                  ]}
+                >
+                  Burned 🔥
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.tabPill,
+                  calorieChartTab === 'consumed' && styles.tabPillActiveConsumed,
+                ]}
+                onPress={() => setCalorieChartTab('consumed')}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.tabPillText,
+                    calorieChartTab === 'consumed' && styles.tabPillTextActive,
+                  ]}
+                >
+                  Consumed 🥗
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Quick Metrics Breakdown Row */}
+          <View style={styles.chartMetricsRow}>
+            <View style={styles.metricItem}>
+              <Text style={styles.metricLabel}>Total Burned</Text>
+              <Text style={[styles.metricValue, { color: '#EA580C' }]}>
+                {totalWeekBurned} <Text style={styles.metricUnit}>kcal</Text>
+              </Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metricItem}>
+              <Text style={styles.metricLabel}>Total Consumed</Text>
+              <Text style={[styles.metricValue, { color: AppColors.primary }]}>
+                {totalWeekConsumed} <Text style={styles.metricUnit}>kcal</Text>
+              </Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metricItem}>
+              <Text style={styles.metricLabel}>Net Energy</Text>
+              <Text
+                style={[
+                  styles.metricValue,
+                  { color: netWeekCalories > 0 ? '#0F172A' : '#16A34A' },
+                ]}
+              >
+                {netWeekCalories > 0 ? `+${netWeekCalories}` : `${netWeekCalories}`}{' '}
+                <Text style={styles.metricUnit}>kcal</Text>
+              </Text>
+            </View>
+          </View>
+
+          {/* Axis Legend Label */}
+          <View style={styles.axisLegendRow}>
+            <Text style={styles.axisLegendText}>
+              Y-Axis: Energy (kcal) • X-Axis: Days of the week
+            </Text>
+          </View>
+
+          {/* Graphical Representation: Bar Chart */}
+          <View style={styles.chartWrapper}>
+            <BarChart
+              data={calorieChartData}
+              width={Math.min(width - 56, 360)}
+              height={210}
+              yAxisLabel=""
+              yAxisSuffix=""
+              fromZero={true}
+              segments={4}
+              showValuesOnTopOfBars={true}
+              chartConfig={{
+                backgroundColor: '#FFFFFF',
+                backgroundGradientFrom: '#FFFFFF',
+                backgroundGradientTo: '#FFFFFF',
+                decimalPlaces: 0,
+                color: (opacity = 1) =>
+                  calorieChartTab === 'burned'
+                    ? `rgba(234, 88, 12, ${opacity})`
+                    : `rgba(41, 143, 80, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+                barPercentage: 0.65,
+                fillShadowGradient:
+                  calorieChartTab === 'burned' ? '#EA580C' : AppColors.primary,
+                fillShadowGradientOpacity: 1,
+                propsForBackgroundLines: {
+                  strokeDasharray: '4 4',
+                  stroke: '#F1F5F9',
+                  strokeWidth: 1,
+                },
+                propsForLabels: {
+                  fontSize: 11,
+                  fontWeight: '600',
+                },
+              }}
+              style={styles.chartStyle}
+            />
           </View>
         </View>
 
@@ -752,6 +913,124 @@ const styles = StyleSheet.create({
     color: '#475569',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
+  },
+  chartCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  chartTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  tabPillContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    padding: 3,
+  },
+  tabPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 13,
+  },
+  tabPillActiveBurned: {
+    backgroundColor: '#EA580C',
+  },
+  tabPillActiveConsumed: {
+    backgroundColor: AppColors.primary,
+  },
+  tabPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  tabPillTextActive: {
+    color: '#FFFFFF',
+  },
+  chartMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  metricItem: {
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  metricUnit: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  metricDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+  },
+  axisLegendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  axisLegendText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderRadius: 16,
+  },
+  chartStyle: {
+    borderRadius: 16,
+    marginVertical: 2,
+    paddingRight: 16,
   },
   consistencyCard: {
     backgroundColor: '#FFFFFF',

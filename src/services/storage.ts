@@ -33,6 +33,7 @@ const STORAGE_KEYS = {
   ONBOARDING_COMPLETED: '@calory_onboarding_completed',
   AI_NUTRITION_PLAN: '@calory_ai_nutrition_plan',
   USER_WEIGHT: '@calory_user_weight',
+  WEIGHT_HISTORY: '@calory_weight_history',
 };
 
 /**
@@ -200,6 +201,45 @@ export async function getUserWeight(): Promise<number | null> {
   } catch (error) {
     console.error('[Storage] Error getting user weight:', error);
     return null;
+  }
+}
+
+export interface WeightLogEntry {
+  weightKg: number;
+  date: string; // YYYY-MM-DD
+  timestamp: number;
+}
+
+/**
+ * Save weight log entry to local history for graphical tracking across time.
+ */
+export async function saveWeightLogLocally(entry: WeightLogEntry): Promise<void> {
+  try {
+    const history = await getWeightLogsLocally();
+    const idx = history.findIndex((h) => h.date === entry.date);
+    if (idx >= 0) {
+      history[idx] = entry;
+    } else {
+      history.push(entry);
+    }
+    history.sort((a, b) => a.timestamp - b.timestamp);
+    await AsyncStorage.setItem(STORAGE_KEYS.WEIGHT_HISTORY, JSON.stringify(history));
+  } catch (error) {
+    console.error('[Storage] Error saving weight log locally:', error);
+  }
+}
+
+/**
+ * Retrieve local weight history entries.
+ */
+export async function getWeightLogsLocally(): Promise<WeightLogEntry[]> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
+    if (!raw) return [];
+    return JSON.parse(raw) as WeightLogEntry[];
+  } catch (error) {
+    console.error('[Storage] Error getting weight logs locally:', error);
+    return [];
   }
 }
 

@@ -273,3 +273,57 @@ export function subscribeToAllUserNutritionLogs(
   return unsubscribe;
 }
 
+export interface WeightLog {
+  id?: string;
+  userId: string;
+  weightKg: number;
+  date: string; // YYYY-MM-DD
+  timestamp: number;
+  createdAt?: any;
+}
+
+/**
+ * Saves updated weight to user profile (users/{userId}) AND appends a time-series entry
+ * to the `weightLogs` collection for graphical tracking over time.
+ */
+export async function saveWeightUpdateToFirestore(
+  userId: string,
+  weightKg: number,
+  dateString: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!db) {
+    return { success: false, error: 'Firestore is not initialized.' };
+  }
+
+  try {
+    // 1. Update user profile document with current weight and date
+    const userDocRef = doc(db, 'users', userId);
+    await setDoc(
+      userDocRef,
+      {
+        weightKg: weightKg,
+        lastWeightUpdateDate: dateString,
+        lastWeightUpdatedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // 2. Append time-series record to weightLogs collection
+    const weightLogsRef = collection(db, 'weightLogs');
+    await addDoc(weightLogsRef, {
+      userId,
+      weightKg,
+      date: dateString,
+      timestamp: Date.now(),
+      createdAt: serverTimestamp(),
+    });
+
+    console.log(`[Firebase] Weight ${weightKg}kg updated and logged for user: users/${userId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('[Firebase] Error saving weight to Firestore:', error);
+    return { success: false, error: error?.message || 'Failed to save weight update' };
+  }
+}
+
