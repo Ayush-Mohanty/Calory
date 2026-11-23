@@ -28,9 +28,9 @@ export interface AiNutritionPlan {
   generatedAt: number;
 }
 
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+const getGeminiApiKey = () => process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
-const GEMINI_MODEL = 'gemini-3.1-flash-lite';
+const GEMINI_MODEL = 'gemini-3.5-flash';
 
 /**
  * Calculates user age from birthDate
@@ -237,12 +237,13 @@ Return ONLY valid JSON matching this exact structure:
 `;
 
   try {
-    if (!GEMINI_API_KEY) {
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
       console.warn('[Gemini API] EXPO_PUBLIC_GEMINI_API_KEY not found in environment, using fallback formula plan');
       return generateFallbackPlan(data);
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -399,6 +400,20 @@ export async function convertImageUriToBase64(uri: string): Promise<string> {
     // Continue to next fallback
   }
 
+  // 1b. Try standard expo-file-system
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const FileSystem = require('expo-file-system');
+    if (FileSystem && typeof FileSystem.readAsStringAsync === 'function') {
+      const b64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType?.Base64 || 'base64',
+      });
+      if (b64) return b64;
+    }
+  } catch (fsErr2) {
+    // Continue to next fallback
+  }
+
   // 2. Universal fetch + FileReader fallback (works across React Native & Web)
   try {
     const response = await fetch(uri);
@@ -467,22 +482,24 @@ CRITICAL RULES:
 7. "servingSize": Estimated portion size (e.g. "1 bowl (300g)", "1 burger (250g)", "2 slices (220g)").
 8. Return ONLY pure JSON. No markdown code blocks (no \`\`\`json), no introductory text.`;
 
-  if (!GEMINI_API_KEY) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
     throw new Error('Missing Gemini API Key. Please check your environment configuration.');
   }
 
-  // Free Gemini models in order of stability and speed
+  // High-performance Gemini vision models in order of stability and availability
   const modelsToTry = [
-    'gemini-3.1-flash-lite',
-    'gemini-3.7-flash',
-    'gemini-flash-latest',
+    'gemini-3.5-flash',
+    'gemini-3.6-flash',
+    'gemini-3-flash-preview',
+    'gemini-3.8-flash',
   ];
 
   let lastError: any = null;
 
   for (const model of modelsToTry) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
       const requestBody = {
         contents: [

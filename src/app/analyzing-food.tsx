@@ -128,23 +128,22 @@ export default function AnalyzingFoodScreen() {
         if (!isMounted) return;
         setAnalysisError(error?.message || 'Unable to recognize food. Tap retry to analyze again.');
         setStep1Status('completed');
-        setStep2Status('completed');
-        setStep3Status('completed');
-        const fallback = getFallbackFoodAnalysis('Food Item');
-        setDetectedMeal(fallback);
-        setIsCompleted(true);
+        setStep2Status('pending');
+        setStep3Status('pending');
+        setDetectedMeal(null);
+        setIsCompleted(false);
       }
     }
 
     if (imageUri || getCachedFoodImageBase64()) {
       runFoodVisionAnalysis();
     } else {
-      const fallback = getFallbackFoodAnalysis('Food Item');
-      setDetectedMeal(fallback);
-      setStep1Status('completed');
-      setStep2Status('completed');
-      setStep3Status('completed');
-      setIsCompleted(true);
+      setAnalysisError('No food image provided. Please go back and select a photo to scan.');
+      setStep1Status('pending');
+      setStep2Status('pending');
+      setStep3Status('pending');
+      setDetectedMeal(null);
+      setIsCompleted(false);
     }
 
     return () => {
@@ -153,6 +152,9 @@ export default function AnalyzingFoodScreen() {
   }, [imageUri, retryTrigger]);
 
   const handleRetry = () => {
+    setAnalysisError(null);
+    setDetectedMeal(null);
+    setIsCompleted(false);
     setRetryTrigger((prev) => prev + 1);
   };
 
