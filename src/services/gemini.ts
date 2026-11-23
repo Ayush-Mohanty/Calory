@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import { OnboardingData } from './storage';
 
 export interface MealBreakdownItem {
@@ -386,32 +387,16 @@ export async function convertImageUriToBase64(uri: string): Promise<string> {
     return parts[1] || '';
   }
 
-  // 1. Try expo-file-system/legacy
+  // 1. Direct Expo FileSystem read (native on iOS/Android for file:// and content://)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const FileSystem = require('expo-file-system/legacy');
     if (FileSystem && typeof FileSystem.readAsStringAsync === 'function') {
       const b64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType?.Base64 || 'base64',
       });
-      if (b64) return b64;
+      if (b64 && b64.length > 0) return b64;
     }
   } catch (fsErr) {
-    // Continue to next fallback
-  }
-
-  // 1b. Try standard expo-file-system
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const FileSystem = require('expo-file-system');
-    if (FileSystem && typeof FileSystem.readAsStringAsync === 'function') {
-      const b64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType?.Base64 || 'base64',
-      });
-      if (b64) return b64;
-    }
-  } catch (fsErr2) {
-    // Continue to next fallback
+    console.warn('[Gemini] FileSystem.readAsStringAsync failed, falling back:', fsErr);
   }
 
   // 2. Universal fetch + FileReader fallback (works across React Native & Web)
@@ -432,18 +417,18 @@ export async function convertImageUriToBase64(uri: string): Promise<string> {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-    if (base64) return base64;
+    if (base64 && base64.length > 0) return base64;
   } catch (blobErr) {
-    // Continue
+    console.warn('[Gemini] Blob FileReader fallback failed:', blobErr);
   }
 
-  throw new Error('Failed to convert image to base64');
+  throw new Error('Failed to read image data from device.');
 }
 
 /**
  * Sends a food image (base64) to Google Gemini AI to analyze meal name,
  * portion size, calories, protein, carbs, and fat in structured JSON.
- * Uses Google's free Gemini vision models (gemini-3.1-flash-lite, gemini-3.7-flash).
+ * Uses Google's Gemini vision models (gemini-3.5-flash, gemini-3.6-flash).
  */
 export async function analyzeFoodImageWithGemini(
   base64Image: string,
@@ -521,11 +506,16 @@ CRITICAL RULES:
         },
       };
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -546,18 +536,30 @@ CRITICAL RULES:
       const cleanedJson = cleanJsonString(rawText);
       const parsed = JSON.parse(cleanedJson);
 
-      const calories = Math.max(0, Math.round(Number(parsed.calories) || 0));
-      const protein = Math.max(0, Math.round((Number(parsed.protein) || 0) * 10) / 10);
-      const carbs = Math.max(0, Math.round((Number(parsed.carbs) || 0) * 10) / 10);
-      const fat = Math.max(0, Math.round((Number(parsed.fat) || 0) * 10) / 10);
+      const extractNumber = (val: any): number => {
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        if (!val) return 0;
+        const cleaned = String(val).replace(/[^0-9.]/g, '');
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+      };
+
+      const calories = Math.max(0, Math.round(extractNumber(parsed.calories)));
+      const protein = Math.max(0, Math.round(extractNumber(parsed.protein) * 10) / 10);
+      const carbs = Math.max(0, Math.round(extractNumber(parsed.carbs) * 10) / 10);
+      const fat = Math.max(0, Math.round(extractNumber(parsed.fat) * 10) / 10);
+
       const name =
-        typeof parsed.name === 'string' && parsed.name.trim()
-          ? parsed.name.trim()
-          : 'Detected Food';
+        (typeof parsed.name === 'string' && parsed.name.trim()) ||
+        (typeof parsed.foodName === 'string' && parsed.foodName.trim()) ||
+        (typeof parsed.dish === 'string' && parsed.dish.trim()) ||
+        (parsed.items && parsed.items[0]?.name) ||
+        'Detected Food';
+
       const servingSize =
-        typeof parsed.servingSize === 'string' && parsed.servingSize.trim()
-          ? parsed.servingSize.trim()
-          : '1 serving';
+        (typeof parsed.servingSize === 'string' && parsed.servingSize.trim()) ||
+        (typeof parsed.portion === 'string' && parsed.portion.trim()) ||
+        '1 serving';
 
       const calculatedCalories =
         calories > 0
@@ -581,7 +583,7 @@ CRITICAL RULES:
     }
   }
 
-  // If all live models failed, re-throw so the UI can show a retry button or handle cleanly
+  // If all live models failed, re-throw so caller can fallback gracefully
   throw (
     lastError ||
     new Error('Food recognition service is temporarily unavailable. Please try again.')

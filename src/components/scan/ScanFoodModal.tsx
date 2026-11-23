@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
   Camera01Icon,
@@ -64,14 +65,27 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.85,
+        quality: 0.7,
         base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        if (asset.base64) {
-          setCachedFoodImageBase64(asset.base64);
+        let base64 = asset.base64;
+
+        // If base64 wasn't returned by the image cropper on native, read directly from file
+        if (!base64 && asset.uri) {
+          try {
+            base64 = await FileSystem.readAsStringAsync(asset.uri, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+          } catch (readErr) {
+            console.warn('[ScanFoodModal] FileSystem camera read error:', readErr);
+          }
+        }
+
+        if (base64) {
+          setCachedFoodImageBase64(base64);
         }
         onClose();
         onSelectImage(asset.uri);
@@ -99,14 +113,27 @@ export const ScanFoodModal: React.FC<ScanFoodModalProps> = ({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.85,
+        quality: 0.7,
         base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        if (asset.base64) {
-          setCachedFoodImageBase64(asset.base64);
+        let base64 = asset.base64;
+
+        // If base64 wasn't returned by the gallery cropper on native, read directly from file
+        if (!base64 && asset.uri) {
+          try {
+            base64 = await FileSystem.readAsStringAsync(asset.uri, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+          } catch (readErr) {
+            console.warn('[ScanFoodModal] FileSystem gallery read error:', readErr);
+          }
+        }
+
+        if (base64) {
+          setCachedFoodImageBase64(base64);
         }
         onClose();
         onSelectImage(asset.uri);
